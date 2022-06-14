@@ -7,6 +7,7 @@ import DashHome from './DashHome';
 import DashProfile from './DashProfile';
 import DashSearch from './DashSearch';
 import DashDock from './DashDock';
+import PopupProfile from './PopupProfile';
 import fadeIn from './animations/fadeIn';
 import fadeOut from './animations/fadeOut';
 
@@ -18,6 +19,10 @@ class Dashboard extends React.Component {
             user: props.user,
             conversations: props.conversations,
             dashDock: React.createRef(),
+            popupProfile: React.createRef(),
+            dashHome: React.createRef(),
+            dashSearch: React.createRef(),
+            dashProfile: React.createRef(),
         }
 
         this.animation = new fadeIn(500);
@@ -33,6 +38,7 @@ class Dashboard extends React.Component {
         this.updateConversations = this.updateConversations.bind(this);
         this.animateSetDashPage = this.animateSetDashPage.bind(this);
         this.updateUser = this.updateUser.bind(this);
+        this.popupProfile = this.popupProfile.bind(this);
 
     }
 
@@ -64,6 +70,24 @@ class Dashboard extends React.Component {
     updateUser(user) {
         this.props.setUser(user);
         this.setState({ user });
+
+        //Update state of user on all dashboard childs
+        switch(this.state.dashPage) {
+            case 'home':
+                this.state.dashHome.current.setUser(user);
+                break;
+            case 'search':
+                this.state.dashSearch.current.setUser(user);
+                break;
+            case 'profile':
+                this.state.dashProfile.current.setUser(user);
+                break;
+        }
+        this.state.popupProfile.current.setUser(user);
+    }
+
+    popupProfile(profile) {
+        this.state.popupProfile.current.popupProfile(profile);
     }
 
     render() {
@@ -85,11 +109,13 @@ class Dashboard extends React.Component {
                 {this.state.dashPage === 'home' && (
                 <Animated.View style={{opacity: this.dashAnimation.value, height: '100%'}}>
                     <DashHome
+                    ref={this.state.dashHome}
                     user={this.state.user}
                     conversations={this.state.conversations}
                     updateUser={this.updateUser}
                     updateConversations={this.updateConversations}
                     animateSetDashPage={this.animateSetDashPage}
+                    popupProfile={this.popupProfile}
                     />
                 </Animated.View>
                 )}
@@ -97,6 +123,8 @@ class Dashboard extends React.Component {
 
                 <Animated.View style={{opacity: this.dashAnimation.value}}>
                     <DashSearch
+                    ref={this.state.dashSearch}
+                    popupProfile={this.popupProfile}
                     user={this.state.user}
                     updateUser={this.updateUser}
                     />
@@ -104,10 +132,18 @@ class Dashboard extends React.Component {
                 )}
                 {this.state.dashPage === 'profile' && (
                 <Animated.View style={{opacity: this.dashAnimation.value}}>
-                    <DashProfile user={this.state.user} setPage={this.props.setPage}/>
+                    <DashProfile user={this.state.user} setPage={this.props.setPage} ref={this.state.dashProfile} />
                 </Animated.View>
                 )}
                 <DashDock ref={this.state.dashDock} setDashPage={this.setDashPage} dashPage={this.state.dashPage} fadeOutCurrentPage={this.fadeOutCurrentPage} dashAnimationValue={this.dashAnimation.value} />
+
+                {/* PROFILE POP UP WIDGET */}
+                <PopupProfile
+                ref={this.state.popupProfile}
+                user={this.state.user}
+                updateUser={this.updateUser}
+
+                />
 
             </Animated.View>
         )

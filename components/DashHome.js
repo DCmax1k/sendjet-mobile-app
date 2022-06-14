@@ -1,4 +1,4 @@
-import { faBan, faCheck, faCommentMedical, faComments, faDownLeftAndUpRightToCenter, faEllipsis, faSearch, faUpRightAndDownLeftFromCenter, faUserGroup, faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import { faBan, faCheck, faCommentMedical, faComments, faDownLeftAndUpRightToCenter, faEllipsis, faHandPointer, faSearch, faTimes, faUpRightAndDownLeftFromCenter, faUserGroup, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
 import { View, Text, Animated, StyleSheet, ScrollView, Image, Pressable, TextInput, Dimensions } from 'react-native';
@@ -34,16 +34,17 @@ class DashHome extends Component {
     this.fadeInAnimation.start();
   }
 
+  setUser(user) {
+    this.setState({ user });
+    this.focusWidget('');
+  }
+
   fadeOutPage() {
     this.fadeInAnimation.finish();
   }
 
   selectConvo(user) {
     console.log(user);
-  }
-
-  showFriendOptions(friendID) {
-
   }
 
   async searchUser(user) {
@@ -114,55 +115,73 @@ class DashHome extends Component {
     this.setState({addConversationList: [...this.state.addConversationList, friend]});
   }
   searchFriends(query) {
+    if (query.length === 0) {
+      this.setState({searchedFriends: this.state.user.friends});
+      return;
+    } else {
+      const searchedFriendsByUsername = this.state.user.friends.filter(friend => friend.username.toLowerCase().includes(query.toLowerCase()));
+      const searchedFriendsByfirstName = this.state.user.friends.filter(friend => friend.firstName.toLowerCase().includes(query.toLowerCase()));
+      const searchedFriendsBylastName = this.state.user.friends.filter(friend => friend.lastName.toLowerCase().includes(query.toLowerCase()));
+      const searchedFriends = [...searchedFriendsByUsername, ...searchedFriendsByfirstName, ...searchedFriendsBylastName];
+      const searchedFriendsNoDuplicates = [];
+      searchedFriends.forEach(friend => {
+        if (!searchedFriendsNoDuplicates.includes(friend)) {
+          searchedFriendsNoDuplicates.push(friend);
+        }
+      }
+      );
 
+      this.setState({searchedFriends: searchedFriendsNoDuplicates});
+    }
   }
-  async unaddFriend(friendID) {
-    const response = await sendData('https://sendjet-app.herokuapp.com/search/unadduser', { id: friendID });
+  async unaddFriend(friend) {
+    this.setState({
+      user: {
+          ...this.state.user,
+          addRequests: this.state.user.addRequests.filter(u => u._id !== friend._id),
+          friends: this.state.user.friends.filter(u => u._id !== friend._id),
+      },
+  });
+    const response = await sendData('https://sendjet-app.herokuapp.com/search/unadduser', { id: friend._id });
     if (response.status !== 'success') return alert('Error removing user');
     this.props.updateUser({
         ...this.state.user,
-        addRequests: this.state.user.addRequests.filter(u => u._id !== user._id),
-        friends: this.state.user.friends.filter(u => u._id !== user._id),
-    });
-    this.setState({
-        user: {
-            ...this.state.user,
-            addRequests: this.state.user.addRequests.filter(u => u._id !== user._id),
-            friends: this.state.user.friends.filter(u => u._id !== user._id),
-        },
+        addRequests: this.state.user.addRequests,
+        friends: this.state.user.friends,
     });
 }
-  async acceptFriendRequest(friendID) {
+  async acceptFriendRequest(friend) {
+    this.setState({
+      user: {
+        ...this.state.user,
+        friendRequests: this.state.user.friendRequests.filter(f => f._id !== friend._id),
+        friends: [...this.state.user.friends, friend],
+      }
+    });
     if (this.state.user.friendRequests.length === 1) this.focusWidget('');
-    const response = await sendData('https://sendjet-app.herokuapp.com/search/acceptfriendrequest', {id: friendID});
+    const response = await sendData('https://sendjet-app.herokuapp.com/search/acceptfriendrequest', {id: friend._id});
     if (response.status !== 'success') return alert('Error accepting friend request');
     this.props.updateUser({
       ...this.state.user,
-      friendRequests: this.state.user.friendRequests.filter(f => f._id !== friendID),
-      friends: [...this.state.user.friends, response.friend],
+      friendRequests: this.state.user.friendRequests,
+      friends: this.state.user.friends,
     })
+  }
+  async declineFriendRequest(friend) {
     this.setState({
       user: {
         ...this.state.user,
-        friendRequests: this.state.user.friendRequests.filter(f => f._id !== friendID),
-        friends: [...this.state.user.friends, response.friend],
+        friendRequests: this.state.user.friendRequests.filter(f => f._id !== friend._id),
       }
     });
-  }
-  async declineFriendRequest(friendID) {
     if (this.state.user.friendRequests.length === 1) this.focusWidget('');
-    const response = await sendData('https://sendjet-app.herokuapp.com/search/declinefriendrequest', {id: friendID});
+    const response = await sendData('https://sendjet-app.herokuapp.com/search/declinefriendrequest', {id: friend._id});
     if (response.status !== 'success') return alert('Error declining friend request');
     this.props.updateUser({
       ...this.state.user,
-      friendRequests: this.state.user.friendRequests.filter(f => f._id !== friendID),
+      friendRequests: this.state.user.friendRequests,
     })
-    this.setState({
-      user: {
-        ...this.state.user,
-        friendRequests: this.state.user.friendRequests.filter(f => f._id !== friendID),
-      }
-    });
+
   }
 
   render() {
@@ -172,38 +191,38 @@ class DashHome extends Component {
 
           {/* FRIEND REQUESTS - Only shown if friend requests */}
           {this.state.user.friendRequests.length !== 0 && (
-          <View style={[styles.friendRequestCont, {display: this.checkDisplay('friendrequest'), height: this.state.focusedWidget==='friendrequest'?'100%':50}]}>
+          <Pressable onPress={() => this.focusWidget('friendrequest')} style={[styles.friendRequestCont, {display: this.checkDisplay('friendrequest'), height: this.state.focusedWidget==='friendrequest'?'100%':50}]}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingTop: this.state.focusedWidget==='friendrequest'?10:0}}>
               <Text style={{fontSize: 15, color: 'white'}}>You have {this.state.user.friendRequests.length} friend request{this.state.user.friendRequests.length===1?'':'s'}</Text>
-              <Pressable onPress={() => this.focusWidget('friendrequest')} style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%'}}>
-                <FontAwesomeIcon icon={this.state.focusedWidget==='friendrequest'?faDownLeftAndUpRightToCenter:faUpRightAndDownLeftFromCenter} size={20} color="#fff" />
-              </Pressable>
+              <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%'}}>
+                <FontAwesomeIcon icon={this.state.focusedWidget==='friendrequest'?faTimes:faHandPointer} size={20} color="#fff" />
+              </View>
             </View>
             {this.state.focusedWidget === 'friendrequest' && (
               <ScrollView contentContainerStyle={{width: '100%'}}>
                 {this.state.user.friendRequests.map((friend, i) => {
                   return (
-                    <View key={i} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: 10}}>
+                    <Pressable onPress={() => this.props.popupProfile(friend)} key={i} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: 10}}>
                       <Image source={{uri: friend.profilePicture}} style={{width: 40, height: 40, borderRadius: 999}} />
                       <View style={{flex: 1, marginLeft: 10}}>
                         <Text style={{fontSize: 15, color: 'white'}}>{friend.firstName}</Text>
                         <Text style={{fontSize: 12, color: 'white'}}>{friend.lastName}</Text>
                       </View>
                       <View style={{flexDirection: 'row', width: 100, height: '100%', justifyContent: 'space-between', alignItems: 'center'}}>
-                        <Pressable onPress={() => {this.acceptFriendRequest(friend._id)}} style={{width: '45%', height: '100%', backgroundColor: 'rgba(0,0,0,0.22)', justifyContent: 'center', alignItems: 'center', borderRadius: 999}}>
+                        <Pressable onPress={() => {this.acceptFriendRequest(friend)}} style={{width: '45%', height: '100%', backgroundColor: 'rgba(0,0,0,0.22)', justifyContent: 'center', alignItems: 'center', borderRadius: 999}}>
                           <FontAwesomeIcon icon={faCheck} size={20} color="#fff" />
                         </Pressable>
-                        <Pressable onPress={() => {this.declineFriendRequest(friend._id)}} style={{width: '45%', height: '100%', backgroundColor: 'rgba(0,0,0,0.22)', justifyContent: 'center', alignItems: 'center', borderRadius: 999}}>
+                        <Pressable onPress={() => {this.declineFriendRequest(friend)}} style={{width: '45%', height: '100%', backgroundColor: 'rgba(0,0,0,0.22)', justifyContent: 'center', alignItems: 'center', borderRadius: 999}}>
                           <FontAwesomeIcon icon={faBan} size={20} color="#fff" />
                         </Pressable>
                       </View>
 
-                    </View>
+                    </Pressable>
                   )
                 })}
               </ScrollView>
             )}
-          </View>
+          </Pressable>
           )}
 
           {/* DUO WIDGET */}
@@ -224,7 +243,7 @@ class DashHome extends Component {
               <FontAwesomeIcon icon={faCommentMedical} size={25} color="#fff" />
               <Text style={{flex: 1, color: '#a4a4a4', fontSize: 15, marginLeft: 10}}>Add conversation</Text>
               <Pressable onPress={() => this.focusWidget('')} style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%'}}>
-                <FontAwesomeIcon icon={faDownLeftAndUpRightToCenter} size={20} color="#fff" />
+                <FontAwesomeIcon icon={faTimes} size={20} color="#fff" />
               </Pressable>
             </View>
             <View style={[styles.searchInputCont, {marginBottom: 20}]}>
@@ -256,13 +275,13 @@ class DashHome extends Component {
           </View>
 
           {/* MESSAGES WIDGET */}
-          <View style={[styles.recentMessagesCont, {maxHeight: this.checkMaxHeight('messages'), display: this.checkDisplay('messages')}]}>
+          <Pressable onPress={() => this.focusWidget('messages')} style={[styles.recentMessagesCont, {maxHeight: this.checkMaxHeight('messages'), display: this.checkDisplay('messages')}]}>
             <View style={styles.messagesHeader}>
               <FontAwesomeIcon icon={faComments} size={25} color="#fff" />
               <Text style={{flex: 1, color: '#a4a4a4', fontSize: 15, marginLeft: 10}}>Conversations</Text>
-              <Pressable onPress={() => this.focusWidget('messages')} style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%'}}>
-                <FontAwesomeIcon icon={this.state.focusedWidget==='messages'?faDownLeftAndUpRightToCenter:faUpRightAndDownLeftFromCenter} size={20} color="#fff" />
-              </Pressable>
+              <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%'}}>
+                <FontAwesomeIcon icon={this.state.focusedWidget==='messages'?faTimes:faHandPointer} size={20} color="#fff" />
+              </View>
             </View>
             <ScrollView style={styles.messagesScrollView}>
               {this.state.conversations.length === 0 && (
@@ -278,16 +297,16 @@ class DashHome extends Component {
               })}
 
             </ScrollView>
-          </View>
+          </Pressable>
 
           {/* FRIENDS WIDGET */}
-          <View style={[styles.friendsCont, {maxHeight: this.checkMaxHeight('friends'), display: this.checkDisplay('friends')}]}>
+          <Pressable onPress={() => this.focusWidget('friends')} style={[styles.friendsCont, {maxHeight: this.checkMaxHeight('friends'), display: this.checkDisplay('friends')}]}>
             <View style={[styles.messagesHeader, {height: 30, marginTop: 10}]}>
               <FontAwesomeIcon icon={faUserGroup} size={25} color="#fff" />
               <Text style={{flex: 1, color: '#a4a4a4', fontSize: 15, marginLeft: 10}}>My friends:</Text>
-              <Pressable onPress={() => this.focusWidget('friends')} style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%', marginTop: 10,}}>
-                <FontAwesomeIcon icon={this.state.focusedWidget==='friends'?faDownLeftAndUpRightToCenter:faUpRightAndDownLeftFromCenter} size={20} color="#fff" />
-              </Pressable>
+              <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%', marginTop: 10,}}>
+                <FontAwesomeIcon icon={this.state.focusedWidget==='friends'?faTimes:faHandPointer} size={20} color="#fff" />
+              </View>
             </View>
             <ScrollView style={styles.friendsScrollView} contentContainerStyle={{justifyContent: 'flex-start', alignItems: 'flex-start',}}>
               {this.state.user.friends.length === 0 && (
@@ -297,7 +316,7 @@ class DashHome extends Component {
               )}
               {this.state.user.friends.map((friend, index) => {
                 return (
-                  <View key={index} style={{height: 70, width: '100%', marginBottom: 5,}}>
+                  <Pressable onPress={() => this.props.popupProfile(friend)} key={index} style={{height: 70, width: '100%', marginBottom: 5,}}>
                     <View style={styles.friendCont}>
                       <Image style={{height: 45, width: 45, borderRadius: 25,}} source={{uri: friend.profilePicture}} />
                       <View style={styles.friendName}>
@@ -305,18 +324,18 @@ class DashHome extends Component {
                         <Text style={{color: '#a4a4a4', fontSize: 14}}>{friend.lastName}</Text>
                       </View>
                       <View style={styles.friendBtns}>
-                        <Pressable onPress={() => this.showFriendOptions(friend._id)}>
+                        <View>
                           <FontAwesomeIcon icon={faEllipsis} size={25} color="#fff" />
-                        </Pressable>
+                        </View>
                       </View>
 
                     </View>
-                  </View>
+                  </Pressable>
                   
                 )
               })}
             </ScrollView>
-          </View> 
+          </Pressable> 
 
         </ScrollView>
 

@@ -14,6 +14,10 @@ class DashProfile extends Component {
          this.logOut = this.logOut.bind(this);
     }
 
+    setUser(user) {
+        this.setState({ user });
+    }
+
     async logOut() {
         const response = await sendData('https://sendjet-app.herokuapp.com/login/logout', {});
         if (response.status !== 'success') return alert('Error logging out');

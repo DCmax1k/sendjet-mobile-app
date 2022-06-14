@@ -19,25 +19,22 @@ class DashSearch extends Component {
         this.acceptFriend = this.acceptFriend.bind(this);
     }
 
+    setUser(user) {
+        this.setState({ user });
+    }
+
     async addFriend(user) {
-        const response = await sendData('https://sendjet-app.herokuapp.com/search/adduser', { id: user._id });
-        if (response.status !== 'success') return alert('Error adding user');
-        this.props.updateUser({...this.state.user, addRequests: [...this.state.user.addRequests, user]});
         this.setState({
             user: {
                 ...this.state.user,
                 addRequests: [...this.state.user.addRequests, user]
             }
         });
+        const response = await sendData('https://sendjet-app.herokuapp.com/search/adduser', { id: user._id });
+        if (response.status !== 'success') return alert('Error adding user');
+        this.props.updateUser({...this.state.user, addRequests: this.state.user.addRequests});
     }
     async unaddFriend(user) {
-        const response = await sendData('https://sendjet-app.herokuapp.com/search/unadduser', { id: user._id });
-        if (response.status !== 'success') return alert('Error removing user');
-        this.props.updateUser({
-            ...this.state.user,
-            addRequests: this.state.user.addRequests.filter(u => u._id !== user._id),
-            friends: this.state.user.friends.filter(u => u._id !== user._id),
-        });
         this.setState({
             user: {
                 ...this.state.user,
@@ -45,28 +42,36 @@ class DashSearch extends Component {
                 friends: this.state.user.friends.filter(u => u._id !== user._id),
             },
         });
+        const response = await sendData('https://sendjet-app.herokuapp.com/search/unadduser', { id: user._id });
+        if (response.status !== 'success') return alert('Error removing user');
+        this.props.updateUser({
+            ...this.state.user,
+            addRequests: this.state.user.addRequests,
+            friends: this.state.user.friends,
+        });
     }
+    async acceptFriend(friend) {
+        this.setState({
+            user: {
+                ...this.state.user,
+                friendRequests: this.state.user.friendRequests.filter(f => f._id !== friend._id),
+                friends: [...this.state.user.friends, friend],
+            }
+        });
+        const response = await sendData('https://sendjet-app.herokuapp.com/search/acceptfriendrequest', {id: friend._id});
+        if (response.status !== 'success') return alert('Error accepting friend request');
+        this.props.updateUser({
+            ...this.state.user,
+            friendRequests: this.state.user.friendRequests,
+            friends: [...this.state.user.friends],
+        })
+    }
+
     async searchUser(query) {
         if (query.length === 0) return this.setState({ searchResults: [] });
         const response = await sendData('https://sendjet-app.herokuapp.com/search', { query });
         if (response.status !== 'success') return alert('Error searching user');
         this.setState({ searchResults: response.users });
-    }
-    async acceptFriend(friendID) {
-        const response = await sendData('https://sendjet-app.herokuapp.com/search/acceptfriendrequest', {id: friendID});
-        if (response.status !== 'success') return alert('Error accepting friend request');
-        this.props.updateUser({
-            ...this.state.user,
-            friendRequests: this.state.user.friendRequests.filter(f => f._id !== friendID),
-            friends: [...this.state.user.friends, response.friend],
-        })
-        this.setState({
-        user: {
-            ...this.state.user,
-            friendRequests: this.state.user.friendRequests.filter(f => f._id !== friendID),
-            friends: [...this.state.user.friends, response.friend],
-        }
-        });
     }
 
     render() {
@@ -82,7 +87,7 @@ class DashSearch extends Component {
                     {this.state.searchResults.length > 0 && (
                         <ScrollView>
                            {this.state.searchResults.map((user, i) => (
-                                <SearchedUser key={i} user={this.state.user} friend={user} acceptFriend={this.acceptFriend} addFriend={this.addFriend} unaddFriend={this.unaddFriend} friends={this.state.user.friends} />
+                                <SearchedUser key={i} user={this.state.user} friend={user} acceptFriend={this.acceptFriend} addFriend={this.addFriend} unaddFriend={this.unaddFriend} friends={this.state.user.friends} popupProfile={this.props.popupProfile} />
                             ))} 
                         </ScrollView>
                     )}
@@ -194,7 +199,7 @@ const styles = StyleSheet.create({
     }
 });
 
-function SearchedUser({user, friend, addFriend, unaddFriend, friends, acceptFriend}) {
+function SearchedUser({user, friend, addFriend, unaddFriend, friends, acceptFriend, popupProfile}) {
 
     let alreadyAdded = false;
     if (user.friendRequests.map(guy => guy._id).includes(friend._id)) alreadyAdded = true;
@@ -205,7 +210,7 @@ function SearchedUser({user, friend, addFriend, unaddFriend, friends, acceptFrie
     }
 
     return (
-        <View style={styles.messageCont}>
+        <Pressable onPress={() => popupProfile(friend)} style={styles.messageCont}>
             <View style={styles.messageCont1}>
                 <Image source={{ uri: friend.profilePicture }} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
             </View>
@@ -217,7 +222,7 @@ function SearchedUser({user, friend, addFriend, unaddFriend, friends, acceptFrie
             </View>
             <View style={styles.messageCont3}>
                 {alreadyAdded? (
-                    <Pressable onPress={() => {acceptFriend(friend._id)}} style={[styles.addBtn, {justifyContent: 'center'}]}>
+                    <Pressable onPress={() => {acceptFriend(friend)}} style={[styles.addBtn, {justifyContent: 'center'}]}>
                         <Text style={{color: '#a4a4a4', fontSize: 13}}>Accept</Text>
                     </Pressable>
                 ): isFriend? (
@@ -236,7 +241,7 @@ function SearchedUser({user, friend, addFriend, unaddFriend, friends, acceptFrie
                 )}
 
             </View>
-        </View>
+        </Pressable>
     );
 }
 
