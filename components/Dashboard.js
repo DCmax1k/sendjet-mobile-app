@@ -132,7 +132,12 @@ class Dashboard extends React.Component {
                 )}
                 {this.state.dashPage === 'profile' && (
                 <Animated.View style={{opacity: this.dashAnimation.value}}>
-                    <DashProfile user={this.state.user} setPage={this.props.setPage} ref={this.state.dashProfile} />
+                    <DashProfile
+                    user={this.state.user}
+                    setPage={this.props.setPage}
+                    ref={this.state.dashProfile}
+                    popupProfile={this.popupProfile}
+                    />
                 </Animated.View>
                 )}
                 <DashDock ref={this.state.dashDock} setDashPage={this.setDashPage} dashPage={this.state.dashPage} fadeOutCurrentPage={this.fadeOutCurrentPage} dashAnimationValue={this.dashAnimation.value} />

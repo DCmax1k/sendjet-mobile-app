@@ -13,7 +13,7 @@ class keyboardShift {
             toValue: -dist,
             duration: 300,
             easing: Easing.linear,
-            useNativeDriver: true,
+            useNativeDriver: false,
         }).start();
     }
 
@@ -22,7 +22,7 @@ class keyboardShift {
             toValue: 0,
             duration: 300,
             easing: Easing.linear,
-            useNativeDriver: true,
+            useNativeDriver: false,
         }).start();
     }
 }

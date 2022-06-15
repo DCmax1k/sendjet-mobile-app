@@ -1,9 +1,10 @@
 import { faPlus, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
-import { View, Text, Animated, StyleSheet, TextInput, Pressable, Image, ScrollView } from 'react-native';
+import { View, Text, Animated, StyleSheet, TextInput, Pressable, Image, ScrollView, Alert } from 'react-native';
 
 import sendData from './sendData';
+import FormatUsername from './FormatUsername';
 
 class DashSearch extends Component {
     constructor(props) {
@@ -74,6 +75,19 @@ class DashSearch extends Component {
         this.setState({ searchResults: response.users });
     }
 
+    confirmAlert(message, callback) {
+        Alert.alert(
+          'Confirm',
+          message,
+          [
+            {text: 'Cancel', onPress: () => {}, style: 'cancel'},
+            {text: 'OK', onPress: callback},
+          ],
+          { cancelable: false }
+        );
+    
+      }
+
     render() {
         return (
             <Animated.View style={{flexDirection: 'column', alignItems: 'center', height: '100%'}}>
@@ -87,7 +101,7 @@ class DashSearch extends Component {
                     {this.state.searchResults.length > 0 && (
                         <ScrollView>
                            {this.state.searchResults.map((user, i) => (
-                                <SearchedUser key={i} user={this.state.user} friend={user} acceptFriend={this.acceptFriend} addFriend={this.addFriend} unaddFriend={this.unaddFriend} friends={this.state.user.friends} popupProfile={this.props.popupProfile} />
+                                <SearchedUser key={i} user={this.state.user} friend={user} acceptFriend={this.acceptFriend} addFriend={this.addFriend} unaddFriend={this.unaddFriend} confirmAlert={this.confirmAlert} friends={this.state.user.friends} popupProfile={this.props.popupProfile} />
                             ))} 
                         </ScrollView>
                     )}
@@ -166,6 +180,7 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
         height: '100%',
         width: '50%',
+        overflow: 'hidden',
     },
     messageCont3: {
         flexDirection: 'column',
@@ -199,7 +214,7 @@ const styles = StyleSheet.create({
     }
 });
 
-function SearchedUser({user, friend, addFriend, unaddFriend, friends, acceptFriend, popupProfile}) {
+function SearchedUser({user, friend, addFriend, unaddFriend, confirmAlert, friends, acceptFriend, popupProfile}) {
 
     let alreadyAdded = false;
     if (user.friendRequests.map(guy => guy._id).includes(friend._id)) alreadyAdded = true;
@@ -216,7 +231,7 @@ function SearchedUser({user, friend, addFriend, unaddFriend, friends, acceptFrie
             </View>
             <View style={styles.messageCont2}>
                 <View style={styles.conversationTitle}>
-                <FormatUsername user={friend} />
+                <FormatUsername size={20} user={friend} />
                 </View>
                 <Text style={{color: '#838383'}}>{friend.firstName + ' ' + friend.lastName}</Text>
             </View>
@@ -226,11 +241,11 @@ function SearchedUser({user, friend, addFriend, unaddFriend, friends, acceptFrie
                         <Text style={{color: '#a4a4a4', fontSize: 13}}>Accept</Text>
                     </Pressable>
                 ): isFriend? (
-                    <Pressable onPress={() => {unaddFriend(friend)}} style={[styles.addBtn, {justifyContent: 'center'}]}>
+                    <Pressable onPress={() => { confirmAlert(`Are you sure you would like to unadd ${friend.username}?`, () => {unaddFriend(friend)})}} style={[styles.addBtn, {justifyContent: 'center'}]}>
                         <Text style={{color: '#a4a4a4', fontSize: 13}}>Friends</Text>
                     </Pressable>
                 ): added?  (
-                    <Pressable onPress={() => {unaddFriend(friend)}} style={[styles.addBtn, {justifyContent: 'center'}]}>
+                    <Pressable onPress={() => { confirmAlert(`Are you sure you would like to unadd ${friend.username}?`, () => {unaddFriend(friend)})}} style={[styles.addBtn, {justifyContent: 'center'}]}>
                         <Text style={{color: '#a4a4a4', fontSize: 13}}>Added</Text>
                     </Pressable>
                 ): (
@@ -243,15 +258,6 @@ function SearchedUser({user, friend, addFriend, unaddFriend, friends, acceptFrie
             </View>
         </Pressable>
     );
-}
-
-function FormatUsername({user}) {
-    return (
-        <View style={{flexDirection: 'row'}}>
-            { user.prefix.title? (<Text style={{fontSize: 20, color: user.prefix.color, fontWeight: 'bold', marginRight: 5,}}>{user.prefix.title}</Text>):null}
-            <Text style={{fontSize: 20, color: '#aaaaaa'}}>{user.username}</Text>
-        </View>
-    )
 }
 
 export default DashSearch;

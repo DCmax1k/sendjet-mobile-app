@@ -1,10 +1,11 @@
 import { faBan, faCheck, faCommentMedical, faComments, faDownLeftAndUpRightToCenter, faEllipsis, faHandPointer, faSearch, faTimes, faUpRightAndDownLeftFromCenter, faUserGroup, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
-import { View, Text, Animated, StyleSheet, ScrollView, Image, Pressable, TextInput, Dimensions } from 'react-native';
+import { View, Text, Animated, StyleSheet, ScrollView, Image, Pressable, TextInput, Dimensions, Alert } from 'react-native';
 
 import fadeIn from './animations/fadeIn';
 import sendData from './sendData';
+import FormatUsername from './FormatUsername';
 
 class DashHome extends Component {
   constructor(props) {
@@ -36,7 +37,6 @@ class DashHome extends Component {
 
   setUser(user) {
     this.setState({ user });
-    this.focusWidget('');
   }
 
   fadeOutPage() {
@@ -125,7 +125,7 @@ class DashHome extends Component {
       const searchedFriends = [...searchedFriendsByUsername, ...searchedFriendsByfirstName, ...searchedFriendsBylastName];
       const searchedFriendsNoDuplicates = [];
       searchedFriends.forEach(friend => {
-        if (!searchedFriendsNoDuplicates.includes(friend)) {
+        if (!searchedFriendsNoDuplicates.map(guy => guy._id).includes(friend._id)) {
           searchedFriendsNoDuplicates.push(friend);
         }
       }
@@ -181,6 +181,19 @@ class DashHome extends Component {
       ...this.state.user,
       friendRequests: this.state.user.friendRequests,
     })
+
+  }
+
+  confirmAlert(message, callback) {
+    Alert.alert(
+      'Confirm',
+      message,
+      [
+        {text: 'Cancel', onPress: () => {}, style: 'cancel'},
+        {text: 'OK', onPress: callback},
+      ],
+      { cancelable: false }
+    );
 
   }
 
@@ -554,7 +567,7 @@ function Conversation({conversation, selectConvo, user}) {
       </View>
       <View style={styles.messageCont2}>
         <View style={styles.conversationTitle}>
-          <FormatUsername user={otherPerson} />
+          <FormatUsername size={20} user={otherPerson} />
         </View>
         <Text style={{color: '#838383'}}>{otherPerson.firstName + ' ' + otherPerson.lastName}</Text>
       </View>
@@ -564,14 +577,5 @@ function Conversation({conversation, selectConvo, user}) {
     </Pressable>
   );
 }
-
-function FormatUsername({user}) {
-  return (
-    <View style={{flexDirection: 'row'}}>
-      { user.prefix.title? (<Text style={{fontSize: 20, color: user.prefix.color, fontWeight: 'bold', marginRight: 5,}}>{user.prefix.title}</Text>):null}
-      <Text style={{fontSize: 20, color: '#aaaaaa'}}>{user.username}</Text>
-    </View>
-  )
- }
 
 export default DashHome;
