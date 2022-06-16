@@ -1,7 +1,7 @@
 import { faBan, faCheck, faCommentMedical, faComments, faDownLeftAndUpRightToCenter, faEllipsis, faHandPointer, faSearch, faTimes, faUpRightAndDownLeftFromCenter, faUserGroup, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
-import { View, Text, Animated, StyleSheet, ScrollView, Image, Pressable, TextInput, Dimensions, Alert } from 'react-native';
+import { View, Text, Animated, StyleSheet, ScrollView, Image, Pressable, TextInput, RefreshControl, Alert, Dimensions } from 'react-native';
 
 import fadeIn from './animations/fadeIn';
 import sendData from './sendData';
@@ -17,6 +17,7 @@ class DashHome extends Component {
       focusedWidget: '',
       searchedFriends: props.user.friends,
       addConversationList: [],
+      refreshing: false,
     };
 
     this.animationSpeed = 200;
@@ -28,6 +29,8 @@ class DashHome extends Component {
     this.selectConvo = this.selectConvo.bind(this);
     this.addConversation = this.addConversation.bind(this);
     this.focusWidget = this.focusWidget.bind(this);
+
+    this.refreshApp = this.refreshApp.bind(this);
 
   }
 
@@ -181,7 +184,26 @@ class DashHome extends Component {
       ...this.state.user,
       friendRequests: this.state.user.friendRequests,
     })
+  }
 
+  async refreshApp() {
+    this.setState({refreshing: true});
+    const response = await sendData('https://sendjet-app.herokuapp.com/dashboard', {});
+    if (response.status !== 'success') return alert('Error refreshing app');
+    let conversations = response.conversations;
+    if (!conversations) conversations = [];
+
+    this.props.updateUser(response.user);
+    this.props.updateConversations(conversations);
+    this.setState({
+      user: response.user,
+      conversations: conversations,
+      userDataFromConversations: [],
+      focusedWidget: '',
+      searchedFriends: response.user.friends,
+      addConversationList: [],
+      refreshing: false,
+    });
   }
 
   confirmAlert(message, callback) {
@@ -199,15 +221,15 @@ class DashHome extends Component {
 
   render() {
     return (
-      <Animated.View style={{opacity: this.fadeInAnimation.value, flexDirection: 'column', alignItems: 'center', height: '100%'}}>
-        <ScrollView scrollEnabled={this.state.focusedWidget?false:true} style={{width: '100%'}} contentContainerStyle={{justifyContent: 'flex-start', alignItems: 'center', height: '67%'}}>
+      <Animated.View style={{opacity: this.fadeInAnimation.value, flexDirection: 'column', alignItems: 'center', height: Dimensions.get('window').height*.7}}>
+        <ScrollView refreshControl={<RefreshControl refreshing={this.state.refreshing} onRefresh={this.refreshApp} />} scrollEnabled={this.state.focusedWidget?false:true} style={{width: '100%'}} contentContainerStyle={{justifyContent: 'flex-start', alignItems: 'center'}}>
 
           {/* FRIEND REQUESTS - Only shown if friend requests */}
           {this.state.user.friendRequests.length !== 0 && (
           <Pressable onPress={() => this.focusWidget('friendrequest')} style={[styles.friendRequestCont, {display: this.checkDisplay('friendrequest'), height: this.state.focusedWidget==='friendrequest'?'100%':50}]}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingTop: this.state.focusedWidget==='friendrequest'?10:0}}>
               <Text style={{fontSize: 15, color: 'white'}}>You have {this.state.user.friendRequests.length} friend request{this.state.user.friendRequests.length===1?'':'s'}</Text>
-              <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%'}}>
+              <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 99999}}>
                 <FontAwesomeIcon icon={this.state.focusedWidget==='friendrequest'?faTimes:faHandPointer} size={20} color="#fff" />
               </View>
             </View>
@@ -255,7 +277,7 @@ class DashHome extends Component {
             <View style={styles.messagesHeader}>
               <FontAwesomeIcon icon={faCommentMedical} size={25} color="#fff" />
               <Text style={{flex: 1, color: '#a4a4a4', fontSize: 15, marginLeft: 10}}>Add conversation</Text>
-              <Pressable onPress={() => this.focusWidget('')} style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%'}}>
+              <Pressable onPress={() => this.focusWidget('')} style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 999999,}}>
                 <FontAwesomeIcon icon={faTimes} size={20} color="#fff" />
               </Pressable>
             </View>
@@ -292,7 +314,7 @@ class DashHome extends Component {
             <View style={styles.messagesHeader}>
               <FontAwesomeIcon icon={faComments} size={25} color="#fff" />
               <Text style={{flex: 1, color: '#a4a4a4', fontSize: 15, marginLeft: 10}}>Conversations</Text>
-              <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%'}}>
+              <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 999999,}}>
                 <FontAwesomeIcon icon={this.state.focusedWidget==='messages'?faTimes:faHandPointer} size={20} color="#fff" />
               </View>
             </View>
@@ -317,7 +339,7 @@ class DashHome extends Component {
             <View style={[styles.messagesHeader, {height: 30, marginTop: 10}]}>
               <FontAwesomeIcon icon={faUserGroup} size={25} color="#fff" />
               <Text style={{flex: 1, color: '#a4a4a4', fontSize: 15, marginLeft: 10}}>My friends:</Text>
-              <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: '50%', marginTop: 10,}}>
+              <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 999999, marginTop: 10,}}>
                 <FontAwesomeIcon icon={this.state.focusedWidget==='friends'?faTimes:faHandPointer} size={20} color="#fff" />
               </View>
             </View>
@@ -415,7 +437,7 @@ const styles = StyleSheet.create({
   },
   messageOnlineStatusOnline: {
     backgroundColor: '#00ce52',
-    borderRadius: '50%',
+    borderRadius: 999999,
     width: 10,
     height: 10,
 

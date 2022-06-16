@@ -158,11 +158,11 @@ function SignupInputs({setPage}) {
                     </View>
                     <View style={styles.inputCont}>
                         <Animated.Text style={[styles.placeholder, {fontSize: lastNameAnim.getFontSize(), transform: [{translateY: lastNameAnim.getBottom()}]}]}>Last name</Animated.Text>
-                        <TextInput style={styles.input} onFocus={() => keyboardAnimation.start(80)} onBlur={() => keyboardAnimation.end()} onChange={changeLastname} value={lastName} />
+                        <TextInput style={styles.input} onFocus={() => keyboardAnimation.start(80)} onEndEditing={() => keyboardAnimation.end()} onChange={changeLastname} value={lastName} />
                     </View>
                     <View style={styles.inputCont}>
                         <Animated.Text style={[styles.placeholder, {fontSize: emailAnim.getFontSize(), transform: [{translateY: emailAnim.getBottom()}]}]}>Email</Animated.Text>
-                        <TextInput style={styles.input} onFocus={() => keyboardAnimation.start(120)} onBlur={() => keyboardAnimation.end()} onChange={changeEmail} value={email} />
+                        <TextInput style={styles.input} onFocus={() => keyboardAnimation.start(120)} onEndEditing={() => keyboardAnimation.end()} onChange={changeEmail} value={email} />
                     </View>
                     <View style={styles.nextBtnCont}>
                         <Pressable style={styles.nextButton} onPress={() => slidePage(2)}>
@@ -178,11 +178,11 @@ function SignupInputs({setPage}) {
                     </View>
                     <View style={styles.inputCont}>
                         <Animated.Text style={[styles.placeholder, {fontSize: passwordAnim.getFontSize(), transform: [{translateY: passwordAnim.getBottom()}]}]}>Password</Animated.Text>
-                        <TextInput secureTextEntry={true} style={styles.input} onFocus={() => keyboardAnimation.start(80)} onBlur={() => keyboardAnimation.end()} onChange={changePassword} value={password} />
+                        <TextInput secureTextEntry={true} style={styles.input} onFocus={() => keyboardAnimation.start(80)} onEndEditing={() => keyboardAnimation.end()} onChange={changePassword} value={password} />
                     </View>
                     <View style={styles.inputCont}>
                         <Animated.Text style={[styles.placeholder, {fontSize: confirmPasswordAnim.getFontSize(), transform: [{translateY: confirmPasswordAnim.getBottom()}]}]}>Confirm password</Animated.Text>
-                        <TextInput secureTextEntry={true} style={styles.input} onFocus={() => keyboardAnimation.start(120)} onBlur={() => keyboardAnimation.end()} onChange={changeConfirmPassword} value={confirmPassword} />
+                        <TextInput secureTextEntry={true} style={styles.input} onFocus={() => keyboardAnimation.start(120)} onEndEditing={() => keyboardAnimation.end()} onChange={changeConfirmPassword} value={confirmPassword} />
                     </View>
                     <View style={[styles.nextBtnCont, {justifyContent: 'space-between'}]}>
                         <Pressable style={[styles.nextButton, {width: '30%'}]} onPress={() => slidePage(1)}>
@@ -246,7 +246,7 @@ function LoginInputs({setPage}) {
                     </View>
                     <View style={styles.inputCont}>
                         <Animated.Text style={[styles.placeholder, {fontSize: passwordAnim.getFontSize(), transform: [{translateY: passwordAnim.getBottom()}]}]}>Password</Animated.Text>
-                        <TextInput secureTextEntry={true} style={styles.input} onFocus={() => keyboardAnimation.start(80)} onBlur={() => keyboardAnimation.end()} onChange={changePassword} value={password} />
+                        <TextInput secureTextEntry={true} style={styles.input} onFocus={() => keyboardAnimation.start(80)} onEndEditing={() => keyboardAnimation.end()} onChange={changePassword} value={password} />
                     </View>
                     <View style={styles.nextBtnCont}>
                         <Pressable style={styles.nextButton} onPress={submit}>

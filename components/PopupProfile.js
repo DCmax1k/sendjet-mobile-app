@@ -127,23 +127,23 @@ class PopupProfile extends Component {
         this.props.updateUser({...this.state.user, username: text,});
     }
     async submitFirstName(name) {
-        const response = await sendData('https://sendjet-app.herokuapp.com/profile/changefirstname', {name: name});
+        const response = await sendData('https://sendjet-app.herokuapp.com/profile/changefirstname', {name,});
         if (response.status !== 'success') return alert('Error changing first name');
     }
     async submitLastName(name) {
-        const response = await sendData('https://sendjet-app.herokuapp.com/profile/changelastname', {name: name});
+        const response = await sendData('https://sendjet-app.herokuapp.com/profile/changelastname', {name,});
         if (response.status !== 'success') return alert('Error changing last name');
     }
     async submitEmail(email) {
-        const response = await sendData('https://sendjet-app.herokuapp.com/profile/changeemail', {email: email});
+        const response = await sendData('https://sendjet-app.herokuapp.com/profile/changeemail', {email,});
         if (response.status !== 'success') return alert('Error changing email');
     }
     async submitPrefix(prefix) {
-        const response = await sendData('https://sendjet-app.herokuapp.com/profile/changeprefix', {prefix: prefix});
+        const response = await sendData('https://sendjet-app.herokuapp.com/profile/changeprefix', {prefix,});
         if (response.status !== 'success') return alert('Error changing prefix');
     }
     async submitUsername(username) {
-        const response = await sendData('https://sendjet-app.herokuapp.com/profile/changeusername', {username: username});
+        const response = await sendData('https://sendjet-app.herokuapp.com/profile/changeusername', {username,});
         if (response.status === 'Username already exists') return alert('Username already exists');
         if (response.status !== 'success') return alert('Error changing username');
     }
@@ -181,7 +181,7 @@ class PopupProfile extends Component {
         return (
             <Animated.View style={[styles.pop, {bottom: this.state.touch, transform: [{translateY: this.state.keyboardAnimation.value}]}]}>
 
-                <View style={styles.gestureCont}
+                <View style={[styles.gestureCont]}
                 onStartShouldSetResponder={() => true}
                 onResponderMove={(e) => {
                     this.state.touch.setValue(-e.nativeEvent.pageY);
@@ -256,15 +256,15 @@ class PopupProfile extends Component {
                         </Pressable>
                         <View style={{flex: 1, height: '100%', justifyContent: 'space-between'}}>
                             <View style={{height: '48%', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 10}}>
-                                <TextInput placeholderTextColor={'#a4a4a4'} style={{height: '100%',color: 'white', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20}} placeholder="First Name" value={this.state.profile.firstName} onChangeText={(text) => {this.setFirstName(text)}} onBlur={(e) => {this.submitFirstName(e.nativeEvent.text)}} />
+                                <TextInput placeholderTextColor={'#a4a4a4'} style={{height: '100%',color: 'white', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20}} placeholder="First Name" value={this.state.profile.firstName} onChangeText={(text) => {this.setFirstName(text)}} onEndEditing={(e) => {this.submitFirstName(e.nativeEvent.text)}} />
                             </View>
                             <View style={{height: '48%', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 10}}>
-                                <TextInput placeholderTextColor={'#a4a4a4'} style={{height: '100%',color: 'white', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20}} placeholder="Last Name" value={this.state.profile.lastName} onChangeText={(text) => {this.setLastName(text)}} onBlur={(e) => {this.submitLastName(e.nativeEvent.text)}} />
+                                <TextInput placeholderTextColor={'#a4a4a4'} style={{height: '100%',color: 'white', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20}} placeholder="Last Name" value={this.state.profile.lastName} onChangeText={(text) => {this.setLastName(text)}} onEndEditing={(e) => {this.submitLastName(e.nativeEvent.text)}} />
                             </View>
                         </View>
                     </View>
                     <View style={{height: 48, backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 10, marginTop: 10, width: '100%'}}>
-                        <TextInput placeholderTextColor={'#a4a4a4'} style={{height: '100%',color: 'white', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20}} placeholder="Email" value={this.state.profile.email} onChangeText={(text) => {this.setEmail(text)}} onBlur={(e) => {this.submitEmail(e.nativeEvent.text)}} />
+                        <TextInput placeholderTextColor={'#a4a4a4'} style={{height: '100%',color: 'white', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20}} placeholder="Email" value={this.state.profile.email} onChangeText={(text) => {this.setEmail(text)}} onEndEditing={(e) => {this.submitEmail(e.nativeEvent.text)}} />
                     </View>
                     <FontAwesomeIcon icon={faGem} size={30} color="#FFC700" style={{marginTop: 20}} />
                     <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop: 20}}>
@@ -278,13 +278,13 @@ class PopupProfile extends Component {
                             <View style={{position: 'absolute', height: '100%', top: 0, justifyContent: 'center', alignItems: 'center', right: 5}}>
                                 <Text style={{color: '#FFC700', fontSize: 20}}>]</Text>
                             </View>
-                            <TextInput onFocus={() => {this.state.keyboardAnimation.start(150)}} pointerEvents={this.state.profile.premium?'auto':'none'} placeholderTextColor={'#6a5300'} style={{height: '100%',color: '#FFC700', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20, textAlign: 'center'}} placeholder="PREFIX" value={this.state.profile.prefix.title} onChangeText={(text) => {this.setPrefix(text)}} onBlur={(e) => {this.submitPrefix(e.nativeEvent.text); this.state.keyboardAnimation.end()}} />
+                            <TextInput onFocus={() => {this.state.keyboardAnimation.start(150)}} pointerEvents={this.state.profile.premium?'auto':'none'} placeholderTextColor={'#6a5300'} style={{height: '100%',color: '#FFC700', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20, textAlign: 'center'}} placeholder="PREFIX" value={this.state.profile.prefix.title} onChangeText={(text) => {this.setPrefix(text)}} onEndEditing={(e) => {this.submitPrefix(e.nativeEvent.text); this.state.keyboardAnimation.end()}} />
                         </View>
                         <View style={{height: 48, flex: 1, backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 10}}>
                             <View style={{width: '100%', height: '100%', position: 'absolute', top: 48, justifyContent: 'flex-start', alignItems: 'flex-start', paddingTop: 5}}>
                                 <Text style={{fontSize: 15, color: this.state.profile.usernameColor?this.state.profile.usernameColor:'#fff', marginRight: 5,}}>{this.state.profile.username}</Text>
                             </View>
-                            <TextInput onFocus={() => {this.state.keyboardAnimation.start(150)}} pointerEvents={this.state.profile.premium?'auto':'none'} placeholderTextColor={'#6a5300'} style={{height: '100%', color: '#FFC700', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20, textAlign: 'center'}} placeholder="username" value={this.state.profile.username} onChangeText={(text) => {this.setUsername(text)}} onBlur={(e) => {this.submitUsername(e.nativeEvent.text); this.state.keyboardAnimation.end()}} />
+                            <TextInput onFocus={() => {this.state.keyboardAnimation.start(150)}} pointerEvents={this.state.profile.premium?'auto':'none'} placeholderTextColor={'#6a5300'} style={{height: '100%', color: '#FFC700', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20, textAlign: 'center'}} placeholder="username" value={this.state.profile.username} onChangeText={(text) => {this.setUsername(text)}} onEndEditing={(e) => {this.submitUsername(e.nativeEvent.text); this.state.keyboardAnimation.end()}} />
                         </View>
                     </View>
                     <View style={{width: '100%', flexDirection: 'row', marginTop: 35}}>

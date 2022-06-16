@@ -137,6 +137,8 @@ class Dashboard extends React.Component {
                     setPage={this.props.setPage}
                     ref={this.state.dashProfile}
                     popupProfile={this.popupProfile}
+                    updateUser={this.updateUser}
+                    updateConversations={this.updateConversations}
                     />
                 </Animated.View>
                 )}

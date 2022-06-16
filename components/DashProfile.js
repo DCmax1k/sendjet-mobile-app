@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { View, Text, Pressable, Image, StyleSheet, Dimensions, Alert } from 'react-native';
+import { View, Text, Pressable, Image, StyleSheet, Dimensions, Alert, ScrollView, RefreshControl } from 'react-native';
 
 import fadeOut from './animations/fadeOut';
 import sendData from './sendData';
@@ -12,9 +12,11 @@ class DashProfile extends Component {
         super(props);
         this.state = { 
             user: props.user,
+            refreshing: false,
          };
 
          this.logOut = this.logOut.bind(this);
+         this.refreshApp = this.refreshApp.bind(this);
     }
 
     setUser(user) {
@@ -32,6 +34,22 @@ class DashProfile extends Component {
         if (response.status !== 'success') return alert('Error logging out');
         this.props.setPage('connecting');
     }
+
+    async refreshApp() {
+        this.setState({refreshing: true});
+        const response = await sendData('https://sendjet-app.herokuapp.com/dashboard', {});
+        if (response.status !== 'success') return alert('Error refreshing app');
+        let conversations = response.conversations;
+        if (!conversations) conversations = [];
+    
+        this.props.updateUser(response.user);
+        this.props.updateConversations(conversations);
+        this.setState({
+          user: response.user,
+          refreshing: false,
+        });
+      }
+
     confirmAlert(message, callback) {
         Alert.alert(
           'Confirm',
@@ -47,7 +65,8 @@ class DashProfile extends Component {
 
     render() {
         return (
-            <View style={{width: '100%', height: '83%', flexDirection: 'column', alignItems: 'center'}}>
+            <View style={{width: '100%', height: Dimensions.get('window').height*0.7, flexDirection: 'column', alignItems: 'center'}}>
+                <ScrollView refreshControl={<RefreshControl refreshing={this.state.refreshing} onRefresh={this.refreshApp} />} style={{width: '100%'}} contentContainerStyle={{justifyContent: 'flex-start', alignItems: 'center'}}>
                 <View style={{marginBottom: 20}}>
                     <View style={{height: 15, width: 15, backgroundColor: '#00ce52', borderRadius: 10}}></View>
                 </View>
@@ -110,9 +129,10 @@ class DashProfile extends Component {
                 <Pressable onPress={() => {this.confirmAlert('Are you sure you want to logout?', this.logOut)}} style={[styles.addBtn, {justifyContent: 'center', marginTop: 20}]}>
                     <Text style={{color: '#a4a4a4', fontSize: 13, marginLeft: 5}}>Logout</Text>
                 </Pressable>
-                <View style={{position: 'absolute', bottom: 0, left: 0, width: '100%'}}>
+                <View style={{marginTop: 50, width: '100%'}}>
                     <Text style={{fontSize: 15, color: '#a4a4a4', width: '100%', textAlign: 'center'}}>Joined Sendjet on {new Date(this.state.user.dateJoined).toDateString()}</Text>
                 </View>
+                </ScrollView>
             </View>
         );
     }

@@ -1,7 +1,7 @@
 import { faHome, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Image, Pressable, Dimensions, Animated } from 'react-native';
+import { View, Keyboard, StyleSheet, SafeAreaView, Image, Pressable, Dimensions, Animated, Platform } from 'react-native';
 
 import DockSlider from './animations/dockSlider';
 
@@ -10,6 +10,7 @@ class DashDock extends Component {
         super(props);
         this.state = { 
             dashPage: props.dashPage,
+            keyboard: false,
         };
 
         this.slidePos1 = 0;
@@ -19,6 +20,16 @@ class DashDock extends Component {
         this.setDashPage = this.setDashPage.bind(this);
         this.setSlideBarLocation = this.setSlideBarLocation.bind(this);
     }
+    componentDidMount() {
+        this.keyboardDidShow = Keyboard.addListener('keyboardDidShow', () => { this.setState({keyboard: true}) });
+        this.keyboardDidHide = Keyboard.addListener('keyboardDidHide', () => { this.setState({keyboard: false}) });
+    }
+
+    componentWillUnmount() {
+        this.keyboardDidShow.remove();
+        this.keyboardDidHide.remove();
+    }
+
 
     setDashPage(page) {
         this.setSlideBarLocation(page);
@@ -43,7 +54,7 @@ class DashDock extends Component {
 
     render() {
         return (
-            <View style={styles.dock}>
+            <View pointerEvents={ Platform.OS === 'android' && this.state.keyboard?'none':'auto'} style={[styles.dock, {opacity: Platform.OS === 'android' && this.state.keyboard?0:1}]}>
                     <View style={styles.dockCont}>
                         <SafeAreaView style={styles.dockItems}>
                             <Animated.View style={[styles.sliderCont, {transform: [{translateX: this.slideAnimation.getValue()}]}]}>
