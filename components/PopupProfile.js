@@ -6,6 +6,7 @@ import { StyleSheet, Text, View, Dimensions, Image, Animated, Pressable, SafeAre
 import sendData from './sendData';
 import FormatUsername from './FormatUsername';
 import keyboardShift from './animations/keyboardShift';
+import formatLastOnline from './utils/formatLastOnline';
 
 const positionFromBottom = -(Dimensions.get('window').height/3);
 const negHeight = -(Dimensions.get('window').height);
@@ -30,6 +31,7 @@ class PopupProfile extends Component {
         this.unaddFriend = this.unaddFriend.bind(this);
         this.acceptFriend = this.acceptFriend.bind(this);
     }
+
     setUser(user) {
         this.setState({ user: user });
     }
@@ -108,44 +110,47 @@ class PopupProfile extends Component {
 
     setFirstName(firstName) {
         this.setState({profile: {...this.state.profile, firstName, }});
-        this.props.updateUser({...this.state.user, firstName,});
+
     }
     setLastName(lastName) {
         this.setState({profile: {...this.state.profile, lastName, }});
-        this.props.updateUser({...this.state.user, lastName,});
+        
     }
     setEmail(text) {
         this.setState({profile: {...this.state.profile, email: text, }});
-        this.props.updateUser({...this.state.user, email: text,});
+        
     }
     setPrefix(text) {
         this.setState({profile: {...this.state.profile, prefix: {...this.state.profile.prefix, title: text}, }});
-        this.props.updateUser({...this.state.user, prefix: {...this.state.user.prefix, title: text},});
     }
     setUsername(text) {
         this.setState({profile: {...this.state.profile, username: text, }});
-        this.props.updateUser({...this.state.user, username: text,});
     }
     async submitFirstName(name) {
         const response = await sendData('https://sendjet-app.herokuapp.com/profile/changefirstname', {name,});
         if (response.status !== 'success') return alert('Error changing first name');
+        this.props.updateUser({...this.state.user, firstName: name,});
     }
     async submitLastName(name) {
         const response = await sendData('https://sendjet-app.herokuapp.com/profile/changelastname', {name,});
         if (response.status !== 'success') return alert('Error changing last name');
+        this.props.updateUser({...this.state.user, lastName: name,});
     }
     async submitEmail(email) {
         const response = await sendData('https://sendjet-app.herokuapp.com/profile/changeemail', {email,});
         if (response.status !== 'success') return alert('Error changing email');
+        this.props.updateUser({...this.state.user, email,});
     }
     async submitPrefix(prefix) {
         const response = await sendData('https://sendjet-app.herokuapp.com/profile/changeprefix', {prefix,});
         if (response.status !== 'success') return alert('Error changing prefix');
+        this.props.updateUser({...this.state.user, prefix: {...this.state.user.prefix, title: prefix},});
     }
     async submitUsername(username) {
         const response = await sendData('https://sendjet-app.herokuapp.com/profile/changeusername', {username,});
         if (response.status === 'Username already exists') return alert('Username already exists');
         if (response.status !== 'success') return alert('Error changing username');
+        this.props.updateUser({...this.state.user, username,});
     }
     async submitPrefixColor(color) {
         const response = await sendData('https://sendjet-app.herokuapp.com/profile/changeprefixcolor', {color,});
@@ -206,7 +211,14 @@ class PopupProfile extends Component {
                 {this.state.profile._id !== this.state.user._id && (
                 <View style={{width: '100%', flexDirection: 'column', alignItems: 'center'}}>
                     <View style={{marginBottom: 20, opacity: this.checkIfFriends()?1:0}}>
-                        <View style={{height: 15, width: 15, backgroundColor: '#00ce52', borderRadius: 10}}></View>
+                        {this.props.getCurrentlyOnline(this.state.profile._id)? (
+                            <View style={{height: 15, width: 15, backgroundColor: '#00ce52', borderRadius: 10}}></View>
+                        ):(
+                            <View style={{height: 15, width: '100%'}}>
+                                <Text style={{width: '100%', textAlign: 'center', color: 'white'}}>{formatLastOnline(this.state.profile.lastOnline)}</Text>
+                            </View>
+                        )}
+                        
                     </View>
                     <View style={{height: 100, width: 100, marginBottom: 20}}>
                         <Image style={{width: '100%', height: '100%', borderRadius: 50}} source={{uri: this.state.profile.profilePicture}} />

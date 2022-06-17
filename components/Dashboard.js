@@ -2,6 +2,8 @@ import { faHome, faPerson, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React from 'react';
 import { StyleSheet, Text, View, Animated, Image, SafeAreaView } from 'react-native';
+import io from 'socket.io-client';
+
 
 import DashHome from './DashHome';
 import DashProfile from './DashProfile';
@@ -18,6 +20,7 @@ class Dashboard extends React.Component {
             dashPage: 'home',
             user: props.user,
             conversations: props.conversations,
+            currentlyOnline: [],
             dashDock: React.createRef(),
             popupProfile: React.createRef(),
             dashHome: React.createRef(),
@@ -32,6 +35,7 @@ class Dashboard extends React.Component {
         this.dashAnimation = new fadeOut(300);
         this.dashAnimation.continue = false;
 
+        this.componentDidMount = this.componentDidMount.bind(this);
         this.setDashPage = this.setDashPage.bind(this);
         this.fadeOutCurrentPage = this.fadeOutCurrentPage.bind(this);
         this.fadeInNewPage = this.fadeInNewPage.bind(this);
@@ -39,7 +43,46 @@ class Dashboard extends React.Component {
         this.animateSetDashPage = this.animateSetDashPage.bind(this);
         this.updateUser = this.updateUser.bind(this);
         this.popupProfile = this.popupProfile.bind(this);
+        this.getCurrentlyOnline = this.getCurrentlyOnline.bind(this);
 
+    }
+
+    componentDidMount() {
+        this.socket = io('https://sendjet-app.herokuapp.com');
+
+        this.socket.on('connect', () => {
+            console.log('connected');
+            this.socket.emit('joinUserRoom', {...this.state.user});
+        });
+        this.socket.on('disconnect', () => {
+            console.log('disconnected');
+        });
+
+        this.socket.on('currentlyOnline', data => {
+            console.log('online', data);
+            this.setState({ currentlyOnline: data });
+        });
+
+        this.socket.on('updateUser', (friend) => {
+            const usersFriends = this.state.user.friends.map(fri => {
+                if (fri._id === friend._id) {
+                    return friend;
+                } else {
+                    return fri;
+                }
+            });
+            this.updateUser({ ...this.state.user, friends: usersFriends }, false);
+        })
+    }
+
+    componentWillUnmount() {
+        console.log('unmounting');
+        this.socket.disconnect();
+    }
+
+    getCurrentlyOnline(userID = '') {
+        if (userID) return this.state.currentlyOnline.find(user => user.userID === userID)?true:false;
+        return this.state.currentlyOnline;
     }
 
 
@@ -67,7 +110,8 @@ class Dashboard extends React.Component {
         this.props.setConversations(conversations);
         this.setState({ conversations });
     }
-    updateUser(user) {
+    updateUser(user, emit = true) {
+        if (emit) this.socket.emit('updateUser', user);
         this.props.setUser(user);
         this.setState({ user });
 
@@ -116,6 +160,7 @@ class Dashboard extends React.Component {
                     updateConversations={this.updateConversations}
                     animateSetDashPage={this.animateSetDashPage}
                     popupProfile={this.popupProfile}
+                    getCurrentlyOnline={this.getCurrentlyOnline}
                     />
                 </Animated.View>
                 )}
@@ -127,6 +172,7 @@ class Dashboard extends React.Component {
                     popupProfile={this.popupProfile}
                     user={this.state.user}
                     updateUser={this.updateUser}
+                    getCurrentlyOnline={this.getCurrentlyOnline}
                     />
                 </Animated.View>
                 )}
@@ -139,6 +185,7 @@ class Dashboard extends React.Component {
                     popupProfile={this.popupProfile}
                     updateUser={this.updateUser}
                     updateConversations={this.updateConversations}
+                    getCurrentlyOnline={this.getCurrentlyOnline}
                     />
                 </Animated.View>
                 )}
@@ -149,7 +196,7 @@ class Dashboard extends React.Component {
                 ref={this.state.popupProfile}
                 user={this.state.user}
                 updateUser={this.updateUser}
-
+                getCurrentlyOnline={this.getCurrentlyOnline}
                 />
 
             </Animated.View>

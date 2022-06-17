@@ -21,6 +21,8 @@ class DashProfile extends Component {
 
     setUser(user) {
         this.setState({ user });
+        // Child components set users
+
     }
     numberWithCommas(x) {
         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');

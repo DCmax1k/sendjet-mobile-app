@@ -1,11 +1,12 @@
 import { faBan, faCheck, faCommentMedical, faComments, faDownLeftAndUpRightToCenter, faEllipsis, faHandPointer, faSearch, faTimes, faUpRightAndDownLeftFromCenter, faUserGroup, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import React, { Component } from 'react';
+import React, { Component, useState } from 'react';
 import { View, Text, Animated, StyleSheet, ScrollView, Image, Pressable, TextInput, RefreshControl, Alert, Dimensions } from 'react-native';
 
 import fadeIn from './animations/fadeIn';
 import sendData from './sendData';
 import FormatUsername from './FormatUsername';
+import formatLastOnline from './utils/formatLastOnline';
 
 class DashHome extends Component {
   constructor(props) {
@@ -18,6 +19,7 @@ class DashHome extends Component {
       searchedFriends: props.user.friends,
       addConversationList: [],
       refreshing: false,
+      conversationRefs: [],
     };
 
     this.animationSpeed = 200;
@@ -325,10 +327,43 @@ class DashHome extends Component {
                 </View>
               )}
               
-              {this.state.conversations.map((convo, index) => {
+              {this.state.conversations.map((conversation, index) => {
+                let biConvo = conversation.members.length===2?true:false;
+                let otherPerson = null;
+                if (biConvo) {
+                  otherPerson = conversation.members.find(member => member._id !== this.state.user._id);
+                }
+                if (this.state.user.friends.map(friend => friend._id).includes(otherPerson._id)) {
+                  otherPerson = this.state.user.friends.find(friend => friend._id === otherPerson._id);
+                }
+              
                 return (
-                  <Conversation key={index} conversation={convo} selectConvo={this.selectConvo} user={this.state.user} />
-                )
+                  <Pressable key={index} onPress={() => this.selectConvo(conversation._id)} style={styles.messageCont}>
+                    <View style={styles.messageCont1}>
+                      <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/roundIcon.png')} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
+                      <View style={[styles.messageOnlineStatus]}>
+              
+                      {this.props.getCurrentlyOnline(this.state.user._id)? (
+                          <View style={styles.messageOnlineStatusOnline}></View>
+                      ):(
+                          <View style={{height: 15, width: '100%'}}>
+                              <Text style={{width: '100%', textAlign: 'center', color: 'white'}}>{formatLastOnline(this.state.user.lastOnline)}</Text>
+                          </View>
+                      )}
+              
+                      </View>
+                    </View>
+                    <View style={styles.messageCont2}>
+                      <View style={styles.conversationTitle}>
+                        <FormatUsername size={20} user={otherPerson} />
+                      </View>
+                      <Text style={{color: '#838383'}}>{otherPerson.firstName + ' ' + otherPerson.lastName}</Text>
+                    </View>
+                    <View style={styles.messageCont3}>
+              
+                    </View>
+                  </Pressable>
+                );
               })}
 
             </ScrollView>
@@ -572,7 +607,7 @@ const styles = StyleSheet.create({
 
 });
 
-function Conversation({conversation, selectConvo, user}) {
+function Conversation({conversation, selectConvo, user, getCurrentlyOnline}) {
   let biConvo = conversation.members.length===2?true:false;
   let otherPerson = null;
   if (biConvo) {
@@ -584,7 +619,15 @@ function Conversation({conversation, selectConvo, user}) {
       <View style={styles.messageCont1}>
         <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/roundIcon.png')} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
         <View style={[styles.messageOnlineStatus]}>
-          <View style={styles.messageOnlineStatusOnline}></View>
+
+        {getCurrentlyOnline(user._id)? (
+            <View style={styles.messageOnlineStatusOnline}></View>
+        ):(
+            <View style={{height: 15, width: '100%'}}>
+                <Text style={{width: '100%', textAlign: 'center', color: 'white'}}>{formatLastOnline(user.lastOnline)}</Text>
+            </View>
+        )}
+
         </View>
       </View>
       <View style={styles.messageCont2}>

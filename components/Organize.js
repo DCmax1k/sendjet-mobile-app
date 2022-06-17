@@ -5,6 +5,7 @@ import Connecting from './Connecting';
 import Login from './Login';
 import Dashboard from './Dashboard';
 
+
 class Organize extends React.Component {
     constructor(props) {
         super(props);
@@ -33,6 +34,7 @@ class Organize extends React.Component {
   render() {
     return (
         <ImageBackground source={require('../assets/background.png')} style={styles.background}>
+
             {this.state.page === 'connecting' &&
             <Connecting
             setPage={this.setPage} setUser={this.setUser}
