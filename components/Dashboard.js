@@ -48,6 +48,8 @@ class Dashboard extends React.Component {
         this.getCurrentlyOnline = this.getCurrentlyOnline.bind(this);
         this.socketEmit = this.socketEmit.bind(this);
         this.openConversation = this.openConversation.bind(this);
+        this.updateOneConversation = this.updateOneConversation.bind(this);
+        this.checkConversation = this.checkConversation.bind(this);
 
     }
 
@@ -114,13 +116,34 @@ class Dashboard extends React.Component {
                 ...this.state.user,
                 addRequests: this.state.user.addRequests.filter(fri => fri._id !== user._id)
             }, false);
-        })
+        });
+
+        // SOCKET MESSAGES HERE
+        this.socket.on('sendMessage', ({conversationID, message}) => {
+            const checkConversation = this.checkConversation();
+            if (checkConversation._id) {
+                if (checkConversation._id === conversationID) {
+                    this.state.messaging.current.pushMessage(message);
+                    return;
+                }
+            }
+            // Update conversation even if not open so it is loaded when user does open it
+            const conversation = this.state.conversations.find(c => c._id === conversationID);
+            if (conversation) {
+                this.updateOneConversation({...conversation, messages: [...conversation.messages, message]});
+            }
+
+        });
 
     }
 
     componentWillUnmount() {
         console.log('unmounting');
         this.socket.disconnect();
+    }
+
+    checkConversation() {
+        return this.state.messaging.current.checkConversation();
     }
 
     getCurrentlyOnline(userID = '') {
@@ -152,6 +175,13 @@ class Dashboard extends React.Component {
     updateConversations(conversations) {
         this.props.setConversations(conversations);
         this.setState({ conversations });
+
+        if (this.state.dashPage === 'home') {
+            this.state.dashHome.current.setConversations(conversations);
+        }
+    }
+    updateOneConversation(conversation) {
+        this.updateConversations([...this.state.conversations.filter(c => c._id !== conversation._id), conversation]);
     }
     updateUser(user, emit = true) {
         if (emit) this.socketEmit('updateUser', user);
@@ -180,7 +210,12 @@ class Dashboard extends React.Component {
     socketEmit(event, data) {
         this.socket.emit(event, data);
     }
-    openConversation(conversation) {
+    openConversation(conversation) { // Can be an id or a conversation
+        if (typeof conversation === 'string') {
+            conversation = this.state.conversations.find(c => c._id === conversation);
+        } else {
+            conversation = this.state.conversations.find(c => c._id === conversation._id);
+        }
         this.state.messaging.current.openConversation(conversation);
     }
 
@@ -250,6 +285,7 @@ class Dashboard extends React.Component {
                 ref={this.state.messaging}
                 user={this.state.user}
                 updateUser={this.updateUser}
+                updateOneConversation={this.updateOneConversation}
                 getCurrentlyOnline={this.getCurrentlyOnline}
                 socketEmit={this.socketEmit}
                 />

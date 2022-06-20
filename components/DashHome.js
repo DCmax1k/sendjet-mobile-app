@@ -44,6 +44,9 @@ class DashHome extends Component {
   setUser(user) {
     this.setState({ user });
   }
+  setConversations(conversations) {
+    this.setState({conversations});
+  }
 
   fadeOutPage() {
     this.fadeInAnimation.finish();

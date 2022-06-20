@@ -32,6 +32,7 @@ class Messaging extends Component {
         this.setInputText = this.setInputText.bind(this);
         this.setTextInputHeight = this.setTextInputHeight.bind(this);
         this.sendText = this.sendText.bind(this);
+        this.checkConversation = this.checkConversation.bind(this);
 
     }
 
@@ -40,11 +41,16 @@ class Messaging extends Component {
     }
 
     openConversation(conversation) {
+        this.state.keyboardShiftAnimation.end();
         this.setState({ conversation });
         if (!this.state.conversation) return;
         this.state.slideAnimation.open();
+        setTimeout(() => {
+            this.state.scrollViewRef.current.scrollToEnd({ animated: false });
+        }, 1);
     }
     closeConversation() {
+        this.setState({ conversation: {} })
         this.state.slideAnimation.close();
         setTimeout(() => {
             this.props.socketEmit('leaveConversation', {user: this.state.user, conversation: this.state.conversation});
@@ -52,12 +58,11 @@ class Messaging extends Component {
     }
 
     pushMessage(message) {
+        const conversation = { ...this.state.conversation, messages: [...this.state.conversation.messages, message] };
         this.setState({
-            conversation: {
-                ...this.state.conversation,
-                messages: [...this.state.conversation.messages, message]
-            }
+            conversation,
         });
+        this.props.updateOneConversation(conversation);
         setTimeout(() => {
             this.state.scrollViewRef.current.scrollToEnd({ animated: true });
         }, 1);
@@ -88,7 +93,12 @@ class Messaging extends Component {
         this.pushMessage(message);
         this.setState({
             inputText: '',
-        })
+        });
+        this.props.socketEmit('sendMessage', {conversationID: this.state.conversation._id, message, members: this.state.conversation.members.map(guy => guy._id) }); // SERVER will update conversation in db, and send message to all users in the chat online or offline, but will just send noti to offline. const rooms = {} on server, with conversation ID as keys, and then array of the useres in that chat. 
+    }
+
+    checkConversation() {
+        return this.state.conversation;
     }
 
     render() {
@@ -114,16 +124,17 @@ class Messaging extends Component {
                         </View>
 
                         <View style={[styles.messagesCont]}>
-                            <ScrollView ref={this.state.scrollViewRef} style={{overflow: 'visible'}} contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}>
+                            <ScrollView ref={this.state.scrollViewRef} contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}>
                                  {/* MAP THROUGH MESSAGES */}
 
                                 {this.state.conversation.messages.map( (message, index) => {
                                     const sentMessage = message.sentBy === this.state.user._id;
                                     let owner = sentMessage?this.state.user:this.state.conversation.members.find(user => user._id === message.sentBy);
+                                    const biConvo = this.state.conversation.members.length === 2;
                                     if (message.type === 'text') {
                                         return (
-                                            <View key={index} style={[styles.message, sentMessage?styles.messageSent:styles.messageRec]}>
-                                                { !sentMessage && <Text style={sentMessage?styles.sentName:styles.recName}>{owner.username}</Text>}
+                                            <View key={index} style={[styles.message, sentMessage?styles.messageSent:styles.messageRec, !sentMessage && !biConvo?{marginTop: 25}:{}]}>
+                                                { !sentMessage && !biConvo && <Text style={sentMessage?styles.sentName:styles.recName}><FormatUsername user={owner} size={16} /></Text>}
                                                 <View style={[styles.messageTypeText, sentMessage?{backgroundColor: '#BE3331'}:{}]}>
                                                     <Text style={{color: 'white', fontSize: 16, fontWeight: '200'}}>{message.content}</Text>
                                                 </View>
@@ -225,7 +236,6 @@ const styles = StyleSheet.create({
     },
     messageRec: {
         justifyContent: 'flex-start',
-        marginTop: 20
     },
     messageSent: {
         justifyContent: 'flex-end',

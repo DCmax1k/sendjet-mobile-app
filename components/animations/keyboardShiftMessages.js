@@ -1,4 +1,4 @@
-import { Animated, Easing } from "react-native";
+import { Animated, Easing, Platform } from "react-native";
 
 class keyboardShiftMessages {
     constructor(beg, finish, duration) {
@@ -16,14 +16,14 @@ class keyboardShiftMessages {
 
     start() {
         Animated.spring(this.value, {
-            toValue: this.finish,
+            toValue: Platform.OS === 'android'?0:this.finish,
             useNativeDriver: false,
         }).start();
     }
 
     end() {
         Animated.spring(this.value, {
-            toValue: this.beg,
+            toValue: Platform.OS === 'android'?0:this.beg,
             useNativeDriver: false,
         }).start();
     }
