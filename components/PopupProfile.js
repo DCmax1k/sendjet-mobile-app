@@ -60,6 +60,7 @@ class PopupProfile extends Component {
         });
         const response = await sendData('https://sendjet-app.herokuapp.com/search/adduser', { id: user._id });
         if (response.status !== 'success') return alert('Error adding user');
+        this.props.socketEmit('adduser', { user: this.state.user, adding: user });
         this.props.updateUser({...this.state.user, addRequests: this.state.user.addRequests});
     }
     async unaddFriend(user) {
@@ -72,6 +73,7 @@ class PopupProfile extends Component {
         });
         const response = await sendData('https://sendjet-app.herokuapp.com/search/unadduser', { id: user._id });
         if (response.status !== 'success') return alert('Error removing user');
+        this.props.socketEmit('unadduser', { user: this.state.user, unadding: user });
         this.props.updateUser({
             ...this.state.user,
             addRequests: this.state.user.addRequests,
@@ -88,6 +90,7 @@ class PopupProfile extends Component {
         });
         const response = await sendData('https://sendjet-app.herokuapp.com/search/acceptfriendrequest', {id: friend._id});
         if (response.status !== 'success') return alert('Error accepting friend request');
+        this.props.socketEmit('acceptfriendrequest', { user: this.state.user, friend, });
         this.props.updateUser({
             ...this.state.user,
             friendRequests: this.state.user.friendRequests,

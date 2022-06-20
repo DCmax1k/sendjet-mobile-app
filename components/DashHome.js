@@ -7,6 +7,7 @@ import fadeIn from './animations/fadeIn';
 import sendData from './sendData';
 import FormatUsername from './FormatUsername';
 import formatLastOnline from './utils/formatLastOnline';
+import searchUser from './utils/searchUser';
 
 class DashHome extends Component {
   constructor(props) {
@@ -48,14 +49,8 @@ class DashHome extends Component {
     this.fadeInAnimation.finish();
   }
 
-  selectConvo(user) {
-    console.log(user);
-  }
-
-  async searchUser(user) {
-    const response = await sendData('https://sendjet-app.herokuapp.com/searchuser', {id: user});
-    if (response.status !== 'success') return alert('Error searching user');
-    return response.user;
+  selectConvo(convo) {
+    this.props.openConversation(convo);
   }
 
   focusWidget(widget) {
@@ -80,7 +75,7 @@ class DashHome extends Component {
       if (this.state.user.friends.map(fri => fri._id).includes(user)) {
         return this.state.user.friends.find(friend => friend._id === user);
       } else {
-        return await this.searchUser(user);
+        return await searchUser(user);
       }
     }));
     const convoData = {
@@ -96,6 +91,7 @@ class DashHome extends Component {
     if (response.status !== 'success') return alert('Error creating conversation');
     convoData.members = [this.state.user, ...members];
     convoData._id = response.convo._id;
+    if (response.message === 'Conversation already exists') return;
     this.setState({conversations: [...this.state.conversations, convoData]});
     this.props.updateConversations(this.state.conversations);
   }
@@ -149,6 +145,7 @@ class DashHome extends Component {
   });
     const response = await sendData('https://sendjet-app.herokuapp.com/search/unadduser', { id: friend._id });
     if (response.status !== 'success') return alert('Error removing user');
+    this.props.socketEmit('unadduser', { user: this.state.user, unadding: user });
     this.props.updateUser({
         ...this.state.user,
         addRequests: this.state.user.addRequests,
@@ -161,11 +158,26 @@ class DashHome extends Component {
         ...this.state.user,
         friendRequests: this.state.user.friendRequests.filter(f => f._id !== friend._id),
         friends: [...this.state.user.friends, friend],
-      }
+      },
     });
+    if (!this.state.conversations.map(c => c.members.map(m => m._id).includes(friend._id)).includes(true)) {
+      this.setState({
+        conversations:
+          [...this.state.conversations, {
+          title: friend.username,
+          subTitle: friend.firstName + ' ' + friend.lastName,
+          members: [this.state.user, friend],
+          messages: [],
+          dateCreated: Date.now(),
+          lastSentBy: this.state.user._id,
+          seenBy: [this.state.user._id],
+        }],
+      });
+    }
     if (this.state.user.friendRequests.length === 1) this.focusWidget('');
     const response = await sendData('https://sendjet-app.herokuapp.com/search/acceptfriendrequest', {id: friend._id});
     if (response.status !== 'success') return alert('Error accepting friend request');
+    this.props.socketEmit('acceptfriendrequest', { user: this.state.user, friend, });
     this.props.updateUser({
       ...this.state.user,
       friendRequests: this.state.user.friendRequests,
@@ -182,6 +194,7 @@ class DashHome extends Component {
     if (this.state.user.friendRequests.length === 1) this.focusWidget('');
     const response = await sendData('https://sendjet-app.herokuapp.com/search/declinefriendrequest', {id: friend._id});
     if (response.status !== 'success') return alert('Error declining friend request');
+    this.props.socketEmit('declinefriendrequest', { user: this.state.user, friend, });
     this.props.updateUser({
       ...this.state.user,
       friendRequests: this.state.user.friendRequests,
@@ -327,7 +340,7 @@ class DashHome extends Component {
                 </View>
               )}
               
-              {this.state.conversations.map((conversation, index) => {
+              {this.state.conversations.sort((a, b) => a.dateActive - b.dateActive).map((conversation, index) => {
                 let biConvo = conversation.members.length===2?true:false;
                 let otherPerson = null;
                 if (biConvo) {
@@ -338,20 +351,10 @@ class DashHome extends Component {
                 }
               
                 return (
-                  <Pressable key={index} onPress={() => this.selectConvo(conversation._id)} style={styles.messageCont}>
+                  <Pressable key={index} onPress={() => this.selectConvo(conversation)} style={styles.messageCont}>
+                    {/* Show popup with the list of users in group chat if group chat with - this.props.popupProfile(users) - */}
                     <View style={styles.messageCont1}>
-                      <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/roundIcon.png')} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
-                      <View style={[styles.messageOnlineStatus]}>
-              
-                      {this.props.getCurrentlyOnline(this.state.user._id)? (
-                          <View style={styles.messageOnlineStatusOnline}></View>
-                      ):(
-                          <View style={{height: 15, width: '100%'}}>
-                              <Text style={{width: '100%', textAlign: 'center', color: 'white'}}>{formatLastOnline(this.state.user.lastOnline)}</Text>
-                          </View>
-                      )}
-              
-                      </View>
+                      <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/groupChat.png')} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
                     </View>
                     <View style={styles.messageCont2}>
                       <View style={styles.conversationTitle}>
@@ -388,7 +391,16 @@ class DashHome extends Component {
                 return (
                   <Pressable onPress={() => this.props.popupProfile(friend)} key={index} style={{height: 70, width: '100%', marginBottom: 5,}}>
                     <View style={styles.friendCont}>
-                      <Image style={{height: 45, width: 45, borderRadius: 25,}} source={{uri: friend.profilePicture}} />
+                    {this.props.getCurrentlyOnline(friend._id)? (
+                          <View style={styles.messageOnlineStatusOnline}></View>
+                      ):(
+                          <View style={{}}>
+                              <Text style={{width: '100%', textAlign: 'center', color: '#a4a4a4'}}>{formatLastOnline(friend.lastOnline)}</Text>
+                              <Text style={{width: '100%', textAlign: 'center', color: '#a4a4a4'}}>ago</Text>
+                              
+                          </View>
+                      )}
+                      <Image style={{height: 45, width: 45, borderRadius: 25,marginLeft: 10}} source={{uri: friend.profilePicture}} />
                       <View style={styles.friendName}>
                         <Text style={{color: '#a4a4a4', fontSize: 14, marginTop: 5,}}>{friend.firstName}</Text>
                         <Text style={{color: '#a4a4a4', fontSize: 14}}>{friend.lastName}</Text>
@@ -615,7 +627,7 @@ function Conversation({conversation, selectConvo, user, getCurrentlyOnline}) {
   }
 
   return (
-    <Pressable onPress={() => selectConvo(conversation._id)} style={styles.messageCont}>
+    <Pressable onPress={() => selectConvo(conversation)} style={styles.messageCont}>
       <View style={styles.messageCont1}>
         <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/roundIcon.png')} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
         <View style={[styles.messageOnlineStatus]}>

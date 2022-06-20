@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ImageBackground } from 'react-native';
+import { StyleSheet, Text, View, ImageBackground, AppState } from 'react-native';
 
 import Connecting from './Connecting';
 import Login from './Login';

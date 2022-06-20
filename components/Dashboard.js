@@ -12,6 +12,7 @@ import DashDock from './DashDock';
 import PopupProfile from './PopupProfile';
 import fadeIn from './animations/fadeIn';
 import fadeOut from './animations/fadeOut';
+import Messaging from './Messaging';
 
 class Dashboard extends React.Component {
     constructor(props) {
@@ -26,6 +27,7 @@ class Dashboard extends React.Component {
             dashHome: React.createRef(),
             dashSearch: React.createRef(),
             dashProfile: React.createRef(),
+            messaging: React.createRef(),
         }
 
         this.animation = new fadeIn(500);
@@ -44,6 +46,8 @@ class Dashboard extends React.Component {
         this.updateUser = this.updateUser.bind(this);
         this.popupProfile = this.popupProfile.bind(this);
         this.getCurrentlyOnline = this.getCurrentlyOnline.bind(this);
+        this.socketEmit = this.socketEmit.bind(this);
+        this.openConversation = this.openConversation.bind(this);
 
     }
 
@@ -72,7 +76,46 @@ class Dashboard extends React.Component {
                 }
             });
             this.updateUser({ ...this.state.user, friends: usersFriends }, false);
+        });
+
+        this.socket.on('adduser', user => {
+            this.updateUser({ ...this.state.user, friendRequests: [...this.state.user.friendRequests, user] }, false);
+        });
+
+        this.socket.on('unadduser', user => {
+            this.updateUser({
+                ...this.state.user,
+                friends: this.state.user.friends.filter(fri => fri._id !== user._id),
+                friendRequests: this.state.user.friendRequests.filter(fri => fri._id !== user._id)
+            }, false);
+        });
+
+        this.socket.on('acceptfriendrequest', user => {
+            this.updateUser({
+                ...this.state.user,
+                friends: [...this.state.user.friends, user],
+                addRequests: this.state.user.addRequests.filter(fri => fri._id !== user._id)
+            }, false);
+            if (!this.state.conversations.map(c => c.members.map(m => m._id).includes(user._id)).includes(true)) {
+                this.updateConversations([...this.state.conversations, {
+                    title: user.username,
+                    subTitle: user.firstName + ' ' + user.lastName,
+                    members: [this.state.user, user],
+                    messages: [],
+                    dateCreated: Date.now(),
+                    lastSentBy: this.state.user._id,
+                    seenBy: [this.state.user._id],
+                  }]);
+              }
+        });
+
+        this.socket.on('declinefriendrequest', user => {
+            this.updateUser({
+                ...this.state.user,
+                addRequests: this.state.user.addRequests.filter(fri => fri._id !== user._id)
+            }, false);
         })
+
     }
 
     componentWillUnmount() {
@@ -111,7 +154,7 @@ class Dashboard extends React.Component {
         this.setState({ conversations });
     }
     updateUser(user, emit = true) {
-        if (emit) this.socket.emit('updateUser', user);
+        if (emit) this.socketEmit('updateUser', user);
         this.props.setUser(user);
         this.setState({ user });
 
@@ -128,10 +171,17 @@ class Dashboard extends React.Component {
                 break;
         }
         this.state.popupProfile.current.setUser(user);
+        this.state.messaging.current.setUser(user);
     }
 
     popupProfile(profile) {
         this.state.popupProfile.current.popupProfile(profile);
+    }
+    socketEmit(event, data) {
+        this.socket.emit(event, data);
+    }
+    openConversation(conversation) {
+        this.state.messaging.current.openConversation(conversation);
     }
 
     render() {
@@ -161,6 +211,8 @@ class Dashboard extends React.Component {
                     animateSetDashPage={this.animateSetDashPage}
                     popupProfile={this.popupProfile}
                     getCurrentlyOnline={this.getCurrentlyOnline}
+                    socketEmit={this.socketEmit}
+                    openConversation={this.openConversation}
                     />
                 </Animated.View>
                 )}
@@ -173,6 +225,7 @@ class Dashboard extends React.Component {
                     user={this.state.user}
                     updateUser={this.updateUser}
                     getCurrentlyOnline={this.getCurrentlyOnline}
+                    socketEmit={this.socketEmit}
                     />
                 </Animated.View>
                 )}
@@ -186,10 +239,20 @@ class Dashboard extends React.Component {
                     updateUser={this.updateUser}
                     updateConversations={this.updateConversations}
                     getCurrentlyOnline={this.getCurrentlyOnline}
+                    socketEmit={this.socketEmit}
                     />
                 </Animated.View>
                 )}
                 <DashDock ref={this.state.dashDock} setDashPage={this.setDashPage} dashPage={this.state.dashPage} fadeOutCurrentPage={this.fadeOutCurrentPage} dashAnimationValue={this.dashAnimation.value} />
+
+                {/* MESSAGING VIEW */}
+                <Messaging 
+                ref={this.state.messaging}
+                user={this.state.user}
+                updateUser={this.updateUser}
+                getCurrentlyOnline={this.getCurrentlyOnline}
+                socketEmit={this.socketEmit}
+                />
 
                 {/* PROFILE POP UP WIDGET */}
                 <PopupProfile
@@ -197,6 +260,7 @@ class Dashboard extends React.Component {
                 user={this.state.user}
                 updateUser={this.updateUser}
                 getCurrentlyOnline={this.getCurrentlyOnline}
+                socketEmit={this.socketEmit}
                 />
 
             </Animated.View>
