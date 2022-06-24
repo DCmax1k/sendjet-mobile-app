@@ -97,6 +97,8 @@ class DashHome extends Component {
     if (response.message === 'Conversation already exists') return;
     this.setState({conversations: [...this.state.conversations, convoData]});
     this.props.updateConversations(this.state.conversations);
+    this.props.socketEmit('addConversation', { convoData, userID: this.state.user._id });
+
   }
 
   checkDisplay(widget) {

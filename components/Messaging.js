@@ -1,11 +1,13 @@
 import { faArrowLeft, faArrowUp, faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
-import { View, Text, ImageBackground, StyleSheet, Animated, Dimensions, SafeAreaView, Pressable, ScrollView, Image, TextInput } from 'react-native';
+import { View, Text, ImageBackground, StyleSheet, Dimensions, Animated as anim, SafeAreaView, Pressable, ScrollView, Image, TextInput, LayoutAnimation, Platform } from 'react-native';
+import Animated, { ZoomIn, ZoomInEasyDown, ZoomInEasyUp, ZoomOut } from 'react-native-reanimated';
 
 import messagingSlide from './animations/messagingSlide';
 import FormatUsername from './FormatUsername';
 import keyboardShiftMessages from './animations/keyboardShiftMessages';
+import keyboardShift from './animations/messagingSlide';
 import searchUser from './utils/searchUser';
 
 const animationDuration = 200;
@@ -23,6 +25,7 @@ class Messaging extends Component {
             scrollViewRef: React.createRef(),
             slideAnimation: new messagingSlide(0, -Dimensions.get('window').width, animationDuration),
             keyboardShiftAnimation: new keyboardShiftMessages(0, 330, 200),
+            messageViewAnimated: new keyboardShift(0, 350, 200),
         };
 
         this.setUser = this.setUser.bind(this);
@@ -48,13 +51,16 @@ class Messaging extends Component {
         setTimeout(() => {
             this.state.scrollViewRef.current.scrollToEnd({ animated: false });
         }, 1);
+        this.props.socketEmit('joinConversationRoom', {conversationID: conversation._id, userID: this.state.user._id, members: conversation.members});
     }
     closeConversation() {
+        const conversation = this.state.conversation;
         this.setState({ conversation: {} })
         this.state.slideAnimation.close();
         setTimeout(() => {
-            this.props.socketEmit('leaveConversation', {user: this.state.user, conversation: this.state.conversation});
+            this.props.socketEmit('leaveConversation', {conversationID: conversation._id, userID: this.state.user._id, members: conversation.members});
         }, animationDuration);
+        
     }
 
     pushMessage(message) {
@@ -68,7 +74,13 @@ class Messaging extends Component {
         }, 1);
     }
     setInChatUsers(users) {
-        this.setState({ inChatUsers: users });
+        this.setState({inChatUsers: users});
+    }
+    addInChatUser(userID) {
+        this.setState({ inChatUsers: [...this.state.inChatUsers, userID] });
+    }
+    removeInChatUser(userID) {
+        this.setState({ inChatUsers: this.state.inChatUsers.filter(user => user !== userID) });
     }
 
     setInputText(e) {
@@ -77,12 +89,23 @@ class Messaging extends Component {
         });
     }
     setTextInputHeight(e) {
-        this.setState({
-            inputTextHeight: e.nativeEvent.contentSize.height,
-        });
+        if (e) {
+           this.setState({
+                inputTextHeight: e.nativeEvent.contentSize.height,
+            }); 
+        } else {
+            if (Platform.OS === 'android') {
+              this.setState({
+                inputTextHeight: 55,
+            });  
+            }
+            
+        }
+        
     }
 
     sendText() {
+        this.setTextInputHeight();
         const message = {
             type: 'text',
             content: this.state.inputText,
@@ -103,13 +126,13 @@ class Messaging extends Component {
 
     render() {
         return (
-            <Animated.View style={[styles.messaging, {transform: [{translateX: this.state.slideAnimation.getValue()}]}]}>
+            <anim.View style={[styles.messaging, {transform: [{translateX: this.state.slideAnimation.getValue()}]}]}>
                 <ImageBackground source={require('../assets/background.png')} style={styles.background}>
                     {this.state.conversation._id && (
-                    <SafeAreaView style={{flex: 1, width: '100%',}}>
+                    <SafeAreaView style={{flex: 1, width: '100%', }}>
 
                         <View style={styles.header}>
-                            <Pressable onPress={this.closeConversation} style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center'}}>
+                            <Pressable onPress={this.closeConversation} style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center', zIndex: 10, elevation: 10}}>
                                 <FontAwesomeIcon icon={faArrowLeft} size={25} color='white' onPress={() => this.closeConversation()} />
                             </Pressable>
                             <View>
@@ -123,8 +146,9 @@ class Messaging extends Component {
                             <View style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center'}}></View>
                         </View>
 
-                        <View style={[styles.messagesCont]}>
-                            <ScrollView ref={this.state.scrollViewRef} contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}>
+                        <anim.View style={{height: Dimensions.get('window').height, width: '100%', zIndex: 0, elevation: 0, position: 'absolute', bottom: Platform.OS === 'android' ? 0 : this.state.messageViewAnimated.getValue() , left: 0}}>
+                            <ScrollView ref={this.state.scrollViewRef} style={{zIndex: 0}} contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1, paddingTop: 130, paddingBottom: 150}}>
+                                
                                  {/* MAP THROUGH MESSAGES */}
 
                                 {this.state.conversation.messages.map( (message, index) => {
@@ -133,50 +157,57 @@ class Messaging extends Component {
                                     const biConvo = this.state.conversation.members.length === 2;
                                     if (message.type === 'text') {
                                         return (
-                                            <View key={index} style={[styles.message, sentMessage?styles.messageSent:styles.messageRec, !sentMessage && !biConvo?{marginTop: 25}:{}]}>
+                                            <Animated.View
+                                            key={index}
+                                            style={[styles.message, sentMessage?styles.messageSent:styles.messageRec, !sentMessage && !biConvo?{marginTop: 25}:{}, {zIndex: 0, elevation: 0,}]}
+                                            entering={sentMessage ? ZoomInEasyDown : ZoomInEasyUp}
+                                            >
                                                 { !sentMessage && !biConvo && <Text style={sentMessage?styles.sentName:styles.recName}><FormatUsername user={owner} size={16} /></Text>}
                                                 <View style={[styles.messageTypeText, sentMessage?{backgroundColor: '#BE3331'}:{}]}>
                                                     <Text style={{color: 'white', fontSize: 16, fontWeight: '200'}}>{message.content}</Text>
                                                 </View>
-                                            </View>
+                                            </Animated.View>
                                         );
                                     }
                                 })}
                             </ScrollView>
-                        </View>
+                        </anim.View>
 
-                        <View style={styles.inputsCont}>
-                            <ScrollView horizontal={true} contentContainerStyle={{flexDirection: 'row', width: '100%', justifyContent: 'flex-start', alignItems: 'flex-end', paddingBottom: 5,}}>
-                                <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', marginLeft: 10 }}>
-                                    <FontAwesomeIcon icon={faEllipsis} size={25} color='white' />
-                                </View>
-                                
-                                {/* For each user in chat */}
-                                {this.state.inChatUsers.map((userID, index) => {
-                                    const user = this.state.conversation.members.find(user => user._id === userID);
-                                    if (user._id === this.state.user._id) return null;
-                                    return (
-                                        <View style={{height: 40, width: 40, marginLeft: 5, borderRadius: 9999, borderWidth: 5, borderColor: '#BE3331', shadowColor: 'black', shadowOffset: {x: 0, y: 0}, shadowRadius: 2, shadowOpacity: 1 }}>
-                                            <Image source={{uri: user.profilePicture}} style={{height: '100%', width: '100%', resizeMode: 'contain'}} />
-                                        </View>
-                                    )
-                                })}
-                            </ScrollView>
-                            {/* KEYBOARD MAKES THIS VIEW MARGIN BOTTOM 330 from 0 */}
-                            <Animated.View style={{width: '100%', height: 70, justifyContent: 'center', alignItems: 'center', marginBottom: this.state.keyboardShiftAnimation.getValue()}}> 
-                                <Pressable onPress={this.sendText} style={{height: 40, width: 40, borderRadius: 999, backgroundColor: '#BD3230', position: 'absolute', right: 10, top: 25, zIndex: 3, justifyContent: 'center', alignItems: 'center'}}>
-                                    <FontAwesomeIcon icon={faArrowUp} size={25} color='white' />
-                                </Pressable>
-                                <TextInput value={this.state.inputText} onChange={this.setInputText} multiline={true} onContentSizeChange={this.setTextInputHeight} onFocus={() => {this.state.keyboardShiftAnimation.start();}} onEndEditing={() => {this.state.keyboardShiftAnimation.end()}} placeholder='Send a message' placeholderTextColor='#a4a4a4' style={[styles.textInput, {height: this.state.inputTextHeight + 30,}]} />
-                            </Animated.View>
+                        <View pointerEvents='box-none' style={{flex: 1, zIndex: 0, elevation: 0,}}>
+                           <View style={[styles.inputsCont,]}>
+                                <ScrollView horizontal={true} contentContainerStyle={{flexDirection: 'row', width: '100%', justifyContent: 'flex-start', alignItems: 'flex-end', paddingBottom: 5,}}>
+                                    <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', marginLeft: 10 }}>
+                                        <FontAwesomeIcon icon={faEllipsis} size={25} color='white' />
+                                    </View>
+                                    
+                                    {/* For each user in chat */}
+                                    {this.state.inChatUsers.map((userID, index) => {
+                                        const user = this.state.conversation.members.find(user => user._id === userID);
+                                        if (user._id === this.state.user._id) return null;
+                                        return (
+                                            <Animated.View key={index} entering={ZoomIn} exiting={ZoomOut} style={{height: 40, width: 40, marginLeft: 5, borderRadius: 9999, borderWidth: 5, borderColor: '#BE3331', shadowColor: 'black', shadowOffset: {x: 0, y: 0}, shadowRadius: 2, shadowOpacity: 1 }}>
+                                                <Image source={{uri: user.profilePicture}} style={{height: '100%', width: '100%', resizeMode: 'contain', borderRadius: 9999}} />
+                                            </Animated.View>
+                                        )
+                                    })}
+                                </ScrollView>
+                                {/* KEYBOARD MAKES THIS VIEW MARGIN BOTTOM 330 from 0 */}
+                                <anim.View style={{width: '100%', height: 70, justifyContent: 'center', alignItems: 'center', marginBottom: this.state.keyboardShiftAnimation.getValue()}}> 
+                                    <Pressable onPress={this.sendText} style={{height: 40, width: 40, borderRadius: 999, backgroundColor: '#BD3230', position: 'absolute', right: 10, top: 25, zIndex: 3, elevation: 3, justifyContent: 'center', alignItems: 'center'}}>
+                                        <FontAwesomeIcon icon={faArrowUp} size={25} color='white' />
+                                    </Pressable>
+                                    <TextInput value={this.state.inputText} onChange={this.setInputText} multiline={true} onContentSizeChange={this.setTextInputHeight} onFocus={() => {this.state.keyboardShiftAnimation.start(); this.state.messageViewAnimated.open();}} onEndEditing={(e) => {this.state.keyboardShiftAnimation.end(); this.state.messageViewAnimated.close(); this.setTextInputHeight()}} placeholder='Send a message' placeholderTextColor='#a4a4a4' style={[styles.textInput, {height: Platform.OS === 'android' ? this.state.inputTextHeight : this.state.inputTextHeight + 30,}]} />
+                                </anim.View>
+                            </View> 
                         </View>
+                        
 
 
 
                     </SafeAreaView>
                     )}
                 </ImageBackground>
-            </Animated.View>
+            </anim.View>
         );
     }
 }
@@ -202,28 +233,27 @@ const styles = StyleSheet.create({
     },
     header : {
         width: '100%',
-        flex: 1,
+        height: 80,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        zIndex: 1,
-    },
-    messagesCont: {
-        flex: 8,
-        width: '100%',
-        zIndex: 0,
+        elevation: 1, zIndex: 1,
+
     },
     inputsCont: {
         minHeight: 130,
         width: '100%',
-        zIndex: 1,
+        elevation: 1, zIndex: 1,
+        position: 'absolute',
+        left: 0,
+        bottom: 0,
     },
     message: {
         width: '100%',
         flexDirection: 'row',
         alignItems: 'center',
-        paddingLeft: 10,
-        paddingRight: 10,
+        paddingLeft: 0,
+        paddingRight: 0,
         marginTop: 10,
     },
     messageTypeText: {
@@ -252,7 +282,7 @@ const styles = StyleSheet.create({
         paddingRight: 60,
         position: 'absolute',
         bottom: 0,
-        zIndex: 2,
+        zIndex: 2, elevation: 2,
         backgroundColor: '#ba5d60',
         borderRadius: 25
     },

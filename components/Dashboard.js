@@ -118,6 +118,10 @@ class Dashboard extends React.Component {
             }, false);
         });
 
+        this.socket.on('addConversation', convoData => {
+            this.updateConversations([...this.state.conversations, convoData]);
+        });
+
         // SOCKET MESSAGES HERE
         this.socket.on('sendMessage', ({conversationID, message}) => {
             const checkConversation = this.checkConversation();
@@ -133,6 +137,20 @@ class Dashboard extends React.Component {
                 this.updateOneConversation({...conversation, messages: [...conversation.messages, message]});
             }
 
+        });
+
+        this.socket.on('joinConversationRoom', ({conversationID, userID, inChatUsers}) => {
+            if (userID === this.state.user._id) {
+                // You joined room, set the users already in room
+                this.state.messaging.current.setInChatUsers(inChatUsers);
+            } else {
+                // Someone else joined the room
+                this.state.messaging.current.addInChatUser(userID);
+            }
+        });
+
+        this.socket.on('leaveConversation', ({conversationID, userID}) => {
+            this.state.messaging.current.removeInChatUser(userID);
         });
 
     }

@@ -25,6 +25,10 @@ class keyboardShift {
             useNativeDriver: false,
         }).start();
     }
+
+    getValue() {
+        return this.value;
+    }
 }
 
 export default keyboardShift;

@@ -17,7 +17,7 @@ class messagingSlide {
         Animated.timing(this.value, {
             toValue: this.end,
             duration: this.duration,
-            useNativeDriver: true,
+            useNativeDriver: false,
         }).start();
     }
 
@@ -25,7 +25,7 @@ class messagingSlide {
         Animated.timing(this.value, {
             toValue: this.start,
             duration: this.duration,
-            useNativeDriver: true,
+            useNativeDriver: false,
         }).start();
     }
 
