@@ -82,6 +82,7 @@ class DashHome extends Component {
       }
     }));
     const convoData = {
+      _id: null,
       title,
       subTitle,
       members: users,
@@ -156,8 +157,9 @@ class DashHome extends Component {
         addRequests: this.state.user.addRequests,
         friends: this.state.user.friends,
     });
-}
+  }
   async acceptFriendRequest(friend) {
+    const conversationAlready = this.state.conversations.map(c => c.members.map(m => m._id).includes(friend._id)).includes(true);
     this.setState({
       user: {
         ...this.state.user,
@@ -165,29 +167,31 @@ class DashHome extends Component {
         friends: [...this.state.user.friends, friend],
       },
     });
-    if (!this.state.conversations.map(c => c.members.map(m => m._id).includes(friend._id)).includes(true)) {
-      this.setState({
-        conversations:
-          [...this.state.conversations, {
-          title: friend.username,
-          subTitle: friend.firstName + ' ' + friend.lastName,
-          members: [this.state.user, friend],
-          messages: [],
-          dateCreated: Date.now(),
-          lastSentBy: this.state.user._id,
-          seenBy: [this.state.user._id],
-        }],
-      });
-    }
+    
     if (this.state.user.friendRequests.length === 1) this.focusWidget('');
     const response = await sendData('https://sendjet-app.herokuapp.com/search/acceptfriendrequest', {id: friend._id});
     if (response.status !== 'success') return alert('Error accepting friend request');
-    this.props.socketEmit('acceptfriendrequest', { user: this.state.user, friend, });
     this.props.updateUser({
       ...this.state.user,
       friendRequests: this.state.user.friendRequests,
       friends: this.state.user.friends,
-    })
+    });
+    let convoData = {_id: null};
+    if (!conversationAlready) {
+      convoData = {
+        _id: response.convo._id,
+        title: friend.username,
+        subTitle: friend.firstName + ' ' + friend.lastName,
+        members: [this.state.user, friend],
+        messages: [],
+        dateCreated: Date.now(),
+        lastSentBy: this.state.user._id,
+        seenBy: [this.state.user._id],
+      };
+
+      this.props.updateConversations([...this.state.conversations, convoData]);
+    }
+    this.props.socketEmit('acceptfriendrequest', { user: this.state.user, friend, convoID:  convoData._id});
   }
   async declineFriendRequest(friend) {
     this.setState({
@@ -224,6 +228,7 @@ class DashHome extends Component {
       addConversationList: [],
       refreshing: false,
     });
+    this.props.socketEmit('joinUserRoom', {...this.state.user});
   }
 
   confirmAlert(message, callback) {
@@ -345,14 +350,11 @@ class DashHome extends Component {
                 </View>
               )}
               
-              {this.state.conversations.sort((a, b) => a.dateActive - b.dateActive).map((conversation, index) => {
+              {this.state.conversations.sort((a, b) => new Date(b.dateActive).getTime() - new Date(a.dateActive).getTime()).map((conversation, index) => {
                 let biConvo = conversation.members.length===2?true:false;
                 let otherPerson = null;
                 if (biConvo) {
                   otherPerson = conversation.members.find(member => member._id !== this.state.user._id);
-                }
-                if (this.state.user.friends.map(friend => friend._id).includes(otherPerson._id)) {
-                  otherPerson = this.state.user.friends.find(friend => friend._id === otherPerson._id);
                 }
               
                 return (
@@ -363,9 +365,19 @@ class DashHome extends Component {
                     </View>
                     <View style={styles.messageCont2}>
                       <View style={styles.conversationTitle}>
-                        <FormatUsername size={20} user={otherPerson} />
+                        {biConvo ? (
+                          <FormatUsername size={20} user={otherPerson} />
+                        ) : (
+                          <Text style={{color: 'white', fontSize: 20}}>{conversation.title}</Text>
+                        )}
+                        
                       </View>
-                      <Text style={{color: '#838383'}}>{otherPerson.firstName + ' ' + otherPerson.lastName}</Text>
+                      {biConvo ? (
+                        <Text style={{color: '#838383'}}>{otherPerson.firstName + ' ' + otherPerson.lastName}</Text>
+                      ) : (
+                        <Text style={{color: '#838383'}}>{conversation.members.length} members</Text>
+                      )}
+                      
                     </View>
                     <View style={styles.messageCont3}>
               
@@ -392,7 +404,7 @@ class DashHome extends Component {
                   <Text style={{color: '#a4a4a4', fontSize: 17}}>No friends added yet</Text>
                 </View>
               )}
-              {this.state.user.friends.map((friend, index) => {
+              {this.state.user.friends.sort((a, b) => new Date(b.lastOnline).getTime() - new Date(a.lastOnline).getTime()).map((friend, index) => {
                 return (
                   <Pressable onPress={() => this.props.popupProfile(friend)} key={index} style={{height: 70, width: '100%', marginBottom: 5,}}>
                     <View style={styles.friendCont}>
@@ -623,41 +635,5 @@ const styles = StyleSheet.create({
   }
 
 });
-
-function Conversation({conversation, selectConvo, user, getCurrentlyOnline}) {
-  let biConvo = conversation.members.length===2?true:false;
-  let otherPerson = null;
-  if (biConvo) {
-    otherPerson = conversation.members.find(member => member._id !== user._id);
-  }
-
-  return (
-    <Pressable onPress={() => selectConvo(conversation)} style={styles.messageCont}>
-      <View style={styles.messageCont1}>
-        <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/roundIcon.png')} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
-        <View style={[styles.messageOnlineStatus]}>
-
-        {getCurrentlyOnline(user._id)? (
-            <View style={styles.messageOnlineStatusOnline}></View>
-        ):(
-            <View style={{height: 15, width: '100%'}}>
-                <Text style={{width: '100%', textAlign: 'center', color: 'white'}}>{formatLastOnline(user.lastOnline)}</Text>
-            </View>
-        )}
-
-        </View>
-      </View>
-      <View style={styles.messageCont2}>
-        <View style={styles.conversationTitle}>
-          <FormatUsername size={20} user={otherPerson} />
-        </View>
-        <Text style={{color: '#838383'}}>{otherPerson.firstName + ' ' + otherPerson.lastName}</Text>
-      </View>
-      <View style={styles.messageCont3}>
-
-      </View>
-    </Pressable>
-  );
-}
 
 export default DashHome;

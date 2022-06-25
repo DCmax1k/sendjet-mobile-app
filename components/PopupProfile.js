@@ -5,7 +5,7 @@ import { StyleSheet, Text, View, Dimensions, Image, Animated, Pressable, SafeAre
 
 import sendData from './sendData';
 import FormatUsername from './FormatUsername';
-import keyboardShift from './animations/keyboardShift';
+import keyboardShift from './animations/settingsKeyboardShift';
 import formatLastOnline from './utils/formatLastOnline';
 
 const positionFromBottom = -(Dimensions.get('window').height/3);

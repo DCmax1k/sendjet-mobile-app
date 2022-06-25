@@ -1,8 +1,8 @@
 import { faArrowLeft, faArrowUp, faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
-import { View, Text, ImageBackground, StyleSheet, Dimensions, Animated as anim, SafeAreaView, Pressable, ScrollView, Image, TextInput, LayoutAnimation, Platform } from 'react-native';
-import Animated, { ZoomIn, ZoomInEasyDown, ZoomInEasyUp, ZoomOut } from 'react-native-reanimated';
+import { View, Text, ImageBackground, StyleSheet, Dimensions, Animated as anim, SafeAreaView, Pressable, ScrollView, Image, TextInput, LayoutAnimation, Platform, AppState } from 'react-native';
+import Animated, { ZoomIn, ZoomInEasyDown, ZoomInEasyUp, ZoomOut, SlideInRight, SlideOutRight, SlideInLeft, SlideOutLeft, FadeInLeft, FadeOutLeft, Layout } from 'react-native-reanimated';
 
 import messagingSlide from './animations/messagingSlide';
 import FormatUsername from './FormatUsername';
@@ -20,13 +20,17 @@ class Messaging extends Component {
             user: props.user,
             conversation: {},
             inChatUsers: [], // jsut ids of those peeking the convo
+            usersTyping: [],
             inputText: '',
             inputTextHeight: 0,
             scrollViewRef: React.createRef(),
             slideAnimation: new messagingSlide(0, -Dimensions.get('window').width, animationDuration),
             keyboardShiftAnimation: new keyboardShiftMessages(0, 330, 200),
-            messageViewAnimated: new keyboardShift(0, 350, 200),
+            messageViewAnimated: new keyboardShift(0, 330, 200),
+            appState: AppState.currentState,
         };
+
+        this.componentDidMount = this.componentDidMount.bind(this);
 
         this.setUser = this.setUser.bind(this);
         this.openConversation = this.openConversation.bind(this);
@@ -36,7 +40,20 @@ class Messaging extends Component {
         this.setTextInputHeight = this.setTextInputHeight.bind(this);
         this.sendText = this.sendText.bind(this);
         this.checkConversation = this.checkConversation.bind(this);
+        this.setUsersTyping = this.setUsersTyping.bind(this);
 
+    }
+
+    componentDidMount() {
+        this.appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+            if (nextAppState === 'background') this.closeConversation();
+            this.setState({appState: nextAppState});
+        });
+        this.state.messageViewAnimated.close();
+    }
+
+    componentWillUnmount() {
+        this.appStateSubscription.remove();
     }
 
     setUser(user) {
@@ -49,13 +66,20 @@ class Messaging extends Component {
         if (!this.state.conversation) return;
         this.state.slideAnimation.open();
         setTimeout(() => {
-            this.state.scrollViewRef.current.scrollToEnd({ animated: false });
+            if (this.state.scrollViewRef.current) {
+                this.state.scrollViewRef.current.scrollToEnd({ animated: false });
+            }
+            
         }, 1);
         this.props.socketEmit('joinConversationRoom', {conversationID: conversation._id, userID: this.state.user._id, members: conversation.members});
     }
     closeConversation() {
         const conversation = this.state.conversation;
-        this.setState({ conversation: {} })
+        this.setState({
+            conversation: {},
+            inChatUsers: [],
+
+        });
         this.state.slideAnimation.close();
         setTimeout(() => {
             this.props.socketEmit('leaveConversation', {conversationID: conversation._id, userID: this.state.user._id, members: conversation.members});
@@ -72,12 +96,14 @@ class Messaging extends Component {
         setTimeout(() => {
             this.state.scrollViewRef.current.scrollToEnd({ animated: true });
         }, 1);
+        return conversation;
     }
     setInChatUsers(users) {
-        this.setState({inChatUsers: users});
+        this.setState({inChatUsers: users.filter((item, index) => users.indexOf(item) === index) });
     }
     addInChatUser(userID) {
-        this.setState({ inChatUsers: [...this.state.inChatUsers, userID] });
+        const newList = [...this.state.inChatUsers, userID];
+        this.setState({ inChatUsers: newList.filter((item, index) => newList.indexOf(item) === index) });
     }
     removeInChatUser(userID) {
         this.setState({ inChatUsers: this.state.inChatUsers.filter(user => user !== userID) });
@@ -87,7 +113,24 @@ class Messaging extends Component {
         this.setState({
             inputText: e.nativeEvent.text,
         });
+        // send socket is typing function
+        this.props.socketEmit('isTyping', {conversationID: this.state.conversation._id, userID: this.state.user._id, text: e.nativeEvent.text});
     }
+
+    setUsersTyping(userTyping, text) {
+        if (text) {
+            const newUsers = [...this.state.usersTyping, userTyping];
+            this.setState({
+                usersTyping: newUsers.filter((user, index) => newUsers.indexOf(user) === index),
+            });
+        } else {
+            this.setState({
+                usersTyping: this.state.usersTyping.filter(user => user!== userTyping),
+            });
+        }
+        
+    }
+
     setTextInputHeight(e) {
         if (e) {
            this.setState({
@@ -113,11 +156,14 @@ class Messaging extends Component {
             sentBy: this.state.user._id,
             edited: false,
         };
-        this.pushMessage(message);
+        const newConversation = this.pushMessage(message);
         this.setState({
             inputText: '',
         });
+        this.props.socketEmit('isTyping', {conversationID: this.state.conversation._id, userID: this.state.user._id, text:''});
         this.props.socketEmit('sendMessage', {conversationID: this.state.conversation._id, message, members: this.state.conversation.members.map(guy => guy._id) }); // SERVER will update conversation in db, and send message to all users in the chat online or offline, but will just send noti to offline. const rooms = {} on server, with conversation ID as keys, and then array of the useres in that chat. 
+        // Update conversation dateActive locally
+        this.props.updateOneConversation({...newConversation, dateActive: new Date()})
     }
 
     checkConversation() {
@@ -131,38 +177,27 @@ class Messaging extends Component {
                     {this.state.conversation._id && (
                     <SafeAreaView style={{flex: 1, width: '100%', }}>
 
-                        <View style={styles.header}>
-                            <Pressable onPress={this.closeConversation} style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center', zIndex: 10, elevation: 10}}>
-                                <FontAwesomeIcon icon={faArrowLeft} size={25} color='white' onPress={() => this.closeConversation()} />
-                            </Pressable>
-                            <View>
-                                {this.state.conversation.members.length === 2 && (
-                                    <FormatUsername user={this.state.conversation.members.find(guy => guy._id !== this.state.user._id)} size={20} />
-                                )}
-                                {this.state.conversation.members.length !== 2 && (
-                                    <Text>{this.state.conversation.title}</Text>
-                                )}
-                            </View>
-                            <View style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center'}}></View>
-                        </View>
-
                         <anim.View style={{height: Dimensions.get('window').height, width: '100%', zIndex: 0, elevation: 0, position: 'absolute', bottom: Platform.OS === 'android' ? 0 : this.state.messageViewAnimated.getValue() , left: 0}}>
                             <ScrollView ref={this.state.scrollViewRef} style={{zIndex: 0}} contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1, paddingTop: 130, paddingBottom: 150}}>
                                 
                                  {/* MAP THROUGH MESSAGES */}
 
-                                {this.state.conversation.messages.map( (message, index) => {
+                                {this.state.conversation.messages.sort((a,b) => a.date - b.date).map( (message, index) => {
+                                    const messages = this.state.conversation.messages.sort((a,b) => a.date - b.date);
                                     const sentMessage = message.sentBy === this.state.user._id;
                                     let owner = sentMessage?this.state.user:this.state.conversation.members.find(user => user._id === message.sentBy);
                                     const biConvo = this.state.conversation.members.length === 2;
+                                    const showUsernameAboveMessage = !sentMessage && !biConvo && ( index===0 || (index>0?messages[index-1].sentBy !== message.sentBy : false ));
+                                    const showDateAboveMessage = index===0 || (index>0?messages[index-1].date - message.date > 3600000 : false);
                                     if (message.type === 'text') {
                                         return (
                                             <Animated.View
                                             key={index}
-                                            style={[styles.message, sentMessage?styles.messageSent:styles.messageRec, !sentMessage && !biConvo?{marginTop: 25}:{}, {zIndex: 0, elevation: 0,}]}
+                                            style={[styles.message, sentMessage?styles.messageSent:styles.messageRec,  {marginTop: showUsernameAboveMessage || showDateAboveMessage? 35 : 10}, {zIndex: 0, elevation: 0,}]}
                                             entering={sentMessage ? ZoomInEasyDown : ZoomInEasyUp}
                                             >
-                                                { !sentMessage && !biConvo && <Text style={sentMessage?styles.sentName:styles.recName}><FormatUsername user={owner} size={16} /></Text>}
+                                                { showUsernameAboveMessage && <Text style={styles.recName}><FormatUsername user={owner} size={13} /></Text>}
+                                                { showDateAboveMessage && <Text style={{ position: 'absolute', width: '100%', textAlign: 'center', top: -25, left: 0, color: '#a4a4a4', fontSize: 15}}>{new Date(message.date).toDateString()}</Text>}
                                                 <View style={[styles.messageTypeText, sentMessage?{backgroundColor: '#BE3331'}:{}]}>
                                                     <Text style={{color: 'white', fontSize: 16, fontWeight: '200'}}>{message.content}</Text>
                                                 </View>
@@ -173,9 +208,25 @@ class Messaging extends Component {
                             </ScrollView>
                         </anim.View>
 
+                        <View style={styles.header}>
+                            <Pressable onPress={this.closeConversation} style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center', zIndex: 10, elevation: 10}}>
+                                <FontAwesomeIcon icon={faArrowLeft} size={25} color='white' onPress={() => this.closeConversation()} />
+                            </Pressable>
+                            <View>
+                                {this.state.conversation.members.length === 2 && (
+                                    <FormatUsername user={this.state.conversation.members.find(guy => guy._id !== this.state.user._id)} size={20} />
+                                )}
+                                {this.state.conversation.members.length !== 2 && (
+                                    <Text style={{color: 'white', fontSize: 20}}>{this.state.conversation.title}</Text>
+                                    // Make this a text input later and when someone changes the title, in the chat it says who changed it and to what it changed it too
+                                )}
+                            </View>
+                            <View style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center'}}></View>
+                        </View>
+
                         <View pointerEvents='box-none' style={{flex: 1, zIndex: 0, elevation: 0,}}>
                            <View style={[styles.inputsCont,]}>
-                                <ScrollView horizontal={true} contentContainerStyle={{flexDirection: 'row', width: '100%', justifyContent: 'flex-start', alignItems: 'flex-end', paddingBottom: 5,}}>
+                                <ScrollView horizontal={true} style={{transform: [{translateY: 15}]}} contentContainerStyle={{flexDirection: 'row', width: '100%', justifyContent: 'flex-start', alignItems: 'flex-end', paddingBottom: 5,}}>
                                     <View style={{height: 40, width: 40, justifyContent: 'center', alignItems: 'center', marginLeft: 10 }}>
                                         <FontAwesomeIcon icon={faEllipsis} size={25} color='white' />
                                     </View>
@@ -185,8 +236,16 @@ class Messaging extends Component {
                                         const user = this.state.conversation.members.find(user => user._id === userID);
                                         if (user._id === this.state.user._id) return null;
                                         return (
-                                            <Animated.View key={index} entering={ZoomIn} exiting={ZoomOut} style={{height: 40, width: 40, marginLeft: 5, borderRadius: 9999, borderWidth: 5, borderColor: '#BE3331', shadowColor: 'black', shadowOffset: {x: 0, y: 0}, shadowRadius: 2, shadowOpacity: 1 }}>
-                                                <Image source={{uri: user.profilePicture}} style={{height: '100%', width: '100%', resizeMode: 'contain', borderRadius: 9999}} />
+                                            <Animated.View key={index} layout={Layout} entering={ZoomIn} exiting={ZoomOut} style={{marginRight: this.state.usersTyping.includes(user._id)?65:0, height: 40, width: 40, marginLeft: 5, borderRadius: 9999, borderWidth: 5, borderColor: '#BE3331', shadowColor: 'black', shadowOffset: {x: 0, y: 0}, shadowRadius: 2, shadowOpacity: 1 }}>
+                                                <Pressable onPress={() => {this.props.popupProfile(user)}}>
+                                                    <Image source={{uri: user.profilePicture}} style={{height: '100%', width: '100%', resizeMode: 'contain', borderRadius: 9999}} />
+                                                </Pressable>
+                                                {this.state.usersTyping.includes(user._id) && (
+                                                <Animated.View entering={FadeInLeft} exiting={FadeOutLeft} style={{position: 'absolute', height: 40, width: 60, top: -5, left: 40, justifyContent: 'center', alignItems: 'center'}}>
+                                                    <Text style={{color: '#a4a4a4', fontSize: 13, }}>typing...</Text>
+                                                </Animated.View>
+                                                )}
+                                                
                                             </Animated.View>
                                         )
                                     })}
@@ -237,7 +296,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        elevation: 1, zIndex: 1,
+        elevation: 1,
+        zIndex: 1,
 
     },
     inputsCont: {
@@ -290,7 +350,7 @@ const styles = StyleSheet.create({
         position: 'absolute', top: -20, right: 30, color: '#a4a4a4',
     },
     recName: {
-        position: 'absolute', top: -20, left: 30, color: '#a4a4a4',
+        position: 'absolute', top: -15, left: 20, color: '#a4a4a4',
     },
 });
 

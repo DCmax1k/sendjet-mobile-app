@@ -62,6 +62,8 @@ class Dashboard extends React.Component {
         });
         this.socket.on('disconnect', () => {
             console.log('disconnected');
+            // Leave a conversation room if in one
+            this.state.messaging.current.closeConversation();
         });
 
         this.socket.on('currentlyOnline', data => {
@@ -92,7 +94,7 @@ class Dashboard extends React.Component {
             }, false);
         });
 
-        this.socket.on('acceptfriendrequest', user => {
+        this.socket.on('acceptfriendrequest', ({user, convoID}) => {
             this.updateUser({
                 ...this.state.user,
                 friends: [...this.state.user.friends, user],
@@ -100,6 +102,7 @@ class Dashboard extends React.Component {
             }, false);
             if (!this.state.conversations.map(c => c.members.map(m => m._id).includes(user._id)).includes(true)) {
                 this.updateConversations([...this.state.conversations, {
+                    _id: convoID,
                     title: user.username,
                     subTitle: user.firstName + ' ' + user.lastName,
                     members: [this.state.user, user],
@@ -134,7 +137,7 @@ class Dashboard extends React.Component {
             // Update conversation even if not open so it is loaded when user does open it
             const conversation = this.state.conversations.find(c => c._id === conversationID);
             if (conversation) {
-                this.updateOneConversation({...conversation, messages: [...conversation.messages, message]});
+                this.updateOneConversation({...conversation, messages: [...conversation.messages, message], dateActive: new Date()});
             }
 
         });
@@ -151,6 +154,12 @@ class Dashboard extends React.Component {
 
         this.socket.on('leaveConversation', ({conversationID, userID}) => {
             this.state.messaging.current.removeInChatUser(userID);
+        });
+
+        this.socket.on('isTyping', ({conversationID, userID, text}) => {
+            if (this.state.messaging.current.checkConversation()._id === conversationID) {
+                this.state.messaging.current.setUsersTyping(userID, text);
+            }
         });
 
     }
@@ -306,6 +315,7 @@ class Dashboard extends React.Component {
                 updateOneConversation={this.updateOneConversation}
                 getCurrentlyOnline={this.getCurrentlyOnline}
                 socketEmit={this.socketEmit}
+                popupProfile={this.popupProfile}
                 />
 
                 {/* PROFILE POP UP WIDGET */}
