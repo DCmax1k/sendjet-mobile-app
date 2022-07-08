@@ -7,6 +7,7 @@ import sendData from './sendData';
 import FormatUsername from './FormatUsername';
 import keyboardShift from './animations/settingsKeyboardShift';
 import formatLastOnline from './utils/formatLastOnline';
+import APressable from './APressable';
 
 const positionFromBottom = -(Dimensions.get('window').height/3);
 const negHeight = -(Dimensions.get('window').height);
@@ -23,6 +24,7 @@ class PopupProfile extends Component {
 
             selectingColor: '', // prefix or username
             keyboardAnimation: new keyboardShift(),
+            isActive: false,
         };
 
         this.popupProfile = this.popupProfile.bind(this);
@@ -30,6 +32,7 @@ class PopupProfile extends Component {
         this.addFriend = this.addFriend.bind(this);
         this.unaddFriend = this.unaddFriend.bind(this);
         this.acceptFriend = this.acceptFriend.bind(this);
+        this.closePopup = this.closePopup.bind(this);
     }
 
     setUser(user) {
@@ -37,7 +40,7 @@ class PopupProfile extends Component {
     }
 
     popupProfile(profile) {
-        this.setState({ profile: profile });
+        this.setState({ profile: profile, isActive: true, });
         Animated.spring(this.state.touch, {
             toValue: positionFromBottom,
             useNativeDriver: false,
@@ -180,6 +183,16 @@ class PopupProfile extends Component {
         }
     }
 
+    closePopup() {
+        Animated.spring(this.state.touch, {
+            toValue: negHeight,
+            useNativeDriver: false,
+        }).start();
+        this.setState({
+            isActive: false,
+        })
+    }
+
     render() {
         if (!this.state.profile) {
             return (
@@ -188,7 +201,8 @@ class PopupProfile extends Component {
         } else {
         return (
             <Animated.View style={[styles.pop, {bottom: this.state.touch, transform: [{translateY: this.state.keyboardAnimation.value}]}]}>
-
+                {/* Invisible hat to close if tapped */}
+                { this.state.isActive ? <Pressable onPress={this.closePopup} style={{ position: 'absolute', height: Dimensions.get('window').height, width: Dimensions.get('window').width, top: 0, left: 0, transform: [{translateY: -Dimensions.get('window').height}]}}></Pressable> : null}
                 <View style={[styles.gestureCont]}
                 onStartShouldSetResponder={() => true}
                 onResponderMove={(e) => {
@@ -196,10 +210,7 @@ class PopupProfile extends Component {
                 }}
                 onResponderRelease={(e) => {
                     if (e.nativeEvent.pageY > Dimensions.get('window').height*0.5) {
-                        Animated.spring(this.state.touch, {
-                            toValue: negHeight,
-                            useNativeDriver: false,
-                        }).start();
+                        this.closePopup();
                     }else {
                         Animated.spring(this.state.touch, {
                             toValue: positionFromBottom,
@@ -238,22 +249,24 @@ class PopupProfile extends Component {
                         <Text style={{fontSize: 15, color: 'white'}}>{this.numberWithCommas(this.state.profile.score)}</Text>
                     </View>
                     { this.state.user.friendRequests.map(guy => guy._id).includes(this.state.profile._id) ? (
-                        <Pressable onPress={() => {this.acceptFriend(this.state.profile)}} style={[styles.addBtn, {justifyContent: 'center'}]}>
+                        <APressable onPress={() => {this.acceptFriend(this.state.profile)}} style={[styles.addBtn, {justifyContent: 'center'}]}>
                             <Text style={{color: '#a4a4a4', fontSize: 13, marginLeft: 5}}>Accept</Text>
-                        </Pressable>
+                        </APressable>
                     ): this.state.user.friends.map(guy => guy._id).includes(this.state.profile._id) ? (
-                        <Pressable onPress={() => {this.confirmAlert(`Are you sure you would like to unadd ${this.state.profile.username}?`, () => {this.unaddFriend(this.state.profile)})}} style={[styles.addBtn, {justifyContent: 'center'}]}>
+                        <APressable onPress={() => {this.confirmAlert(`Are you sure you would like to unadd ${this.state.profile.username}?`, () => {this.unaddFriend(this.state.profile)})}} style={[styles.addBtn, {justifyContent: 'center'}]}>
                             <Text style={{color: '#a4a4a4', fontSize: 13, marginLeft: 5}}>Friends</Text>
-                        </Pressable>
+                        </APressable>
                     ): this.state.user.addRequests.map(guy => guy._id).includes(this.state.profile._id) ?  (
-                        <Pressable onPress={() => {this.confirmAlert(`Are you sure you would like to unadd ${this.state.profile.username}?`, () => {this.unaddFriend(this.state.profile)})}} style={[styles.addBtn, {justifyContent: 'center'}]}>
+                        <APressable onPress={() => {this.confirmAlert(`Are you sure you would like to unadd ${this.state.profile.username}?`, () => {this.unaddFriend(this.state.profile)})}} style={[styles.addBtn, {justifyContent: 'center'}]}>
                             <Text style={{color: '#a4a4a4', fontSize: 13, marginLeft: 5}}>Added</Text>
-                        </Pressable>
+                        </APressable>
                     ): (
-                        <Pressable style={styles.addBtn} onPress={() => this.addFriend(this.state.profile)}>
-                            <FontAwesomeIcon icon={faPlus} size={16} color="#a4a4a4" />
-                            <Text style={{color: '#a4a4a4', fontSize: 13, marginLeft: 5}}>Add</Text>
-                        </Pressable>
+                        <APressable style={styles.addBtn} onPress={() => this.addFriend(this.state.profile)}>
+                            <View style={{height: '100%', width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center'}}>
+                                <FontAwesomeIcon icon={faPlus} size={16} color="#a4a4a4" />
+                                <Text style={{color: '#a4a4a4', fontSize: 13, marginLeft: 5}}>Add</Text>
+                            </View>
+                        </APressable>
                     )}
                     <View style={{marginTop: 100, opacity: this.checkIfFriends()?1:0}}>
                         <Text style={{fontSize: 15, color: '#a4a4a4', marginBottom: 10}}>{this.state.profile.firstName} joined Sendjet on {new Date(this.state.profile.dateJoined).toDateString()}</Text>
@@ -263,12 +276,12 @@ class PopupProfile extends Component {
                 {this.state.profile._id === this.state.user._id && (
                 <ScrollView style={{width: '100%', height: '66%', position: 'absolute', top: 30}} contentContainerStyle={{alignItems: 'center'}}>
                     <View style={{justifyContent: 'flex-start', flexDirection: 'row', marginTop: 25, height: 100}}>
-                        <Pressable style={{borderRadius: 50, overflow: 'hidden', height: '100%', width: 100, marginRight: 10}}>
+                        <APressable style={{borderRadius: 50, overflow: 'hidden', height: '100%', width: 100, marginRight: 10}}>
                             <Image style={{width: '100%', height: '100%', position: 'absolute', top: 0, left: 0}} source={{uri: this.state.profile.profilePicture}} />
                             <View style={{width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)'}}>
                                 <Text style={{fontSize: 12, color: 'white', textAlign: 'center'}}>Change{'\n'}Image</Text>
                             </View>
-                        </Pressable>
+                        </APressable>
                         <View style={{flex: 1, height: '100%', justifyContent: 'space-between'}}>
                             <View style={{height: '48%', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 10}}>
                                 <TextInput placeholderTextColor={'#a4a4a4'} style={{height: '100%',color: 'white', fontSize: 15, padding: 10, paddingLeft: 20, paddingRight: 20}} placeholder="First Name" value={this.state.profile.firstName} onChangeText={(text) => {this.setFirstName(text)}} onEndEditing={(e) => {this.submitFirstName(e.nativeEvent.text)}} />
@@ -303,23 +316,23 @@ class PopupProfile extends Component {
                         </View>
                     </View>
                     <View style={{width: '100%', flexDirection: 'row', marginTop: 35}}>
-                        <Pressable pointerEvents={this.state.profile.premium?'auto':'none'} onPress={() => {this.setState({selectingColor: 'prefix'})}} style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                            <View style={{borderWidth: this.state.selectingColor==='prefix'?4:0,  borderColor: '#0066ff', flex: 1, height: 25, width: 25, borderRadius: 50, backgroundColor: this.state.profile.prefix.color}}></View>
-                        </Pressable>
-                        <Pressable pointerEvents={this.state.profile.premium?'auto':'none'} onPress={() => {this.setState({selectingColor: 'username'})}} style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                            <View style={{borderWidth: this.state.selectingColor==='username'?4:0,  borderColor: '#0066ff', flex: 1, height: 25, width: 25, borderRadius: 50, backgroundColor: this.state.profile.usernameColor, }}></View>
-                        </Pressable>
+                        <APressable pointerEvents={this.state.profile.premium?'auto':'none'} onPress={() => {this.setState({selectingColor: 'prefix'})}} style={{flex: 1, justifyContent: 'center', alignItems: 'center', height: 25}}>
+                            <View style={{borderWidth: this.state.selectingColor==='prefix'?4:0,  borderColor: '#0066ff', flex: 1, height: '100%', width: 25, borderRadius: 50, backgroundColor: this.state.profile.prefix.color}}></View>
+                        </APressable>
+                        <APressable pointerEvents={this.state.profile.premium?'auto':'none'} onPress={() => {this.setState({selectingColor: 'username'})}} style={{flex: 1, justifyContent: 'center', alignItems: 'center', height: 25}}>
+                            <View style={{borderWidth: this.state.selectingColor==='username'?4:0,  borderColor: '#0066ff', flex: 1, height: '100%', width: 25, borderRadius: 50, backgroundColor: this.state.profile.usernameColor, }}></View>
+                        </APressable>
                     </View>
                     <View pointerEvents={this.state.selectingColor?'auto':'none'} style={{flexDirection: 'row', width: '100%', justifyContent: 'space-around', alignItems: 'center', marginTop: 30, opacity: this.state.selectingColor?1:0}}>
-                        <Pressable onPress={() => {this.selectColor('#fe0000')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#fe0000',}}></Pressable>
-                        <Pressable onPress={() => {this.selectColor('#ff9000')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#ff9000',}}></Pressable>
-                        <Pressable onPress={() => {this.selectColor('#e1d51f')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#e1d51f',}}></Pressable>
-                        <Pressable onPress={() => {this.selectColor('#318154')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#318154',}}></Pressable>
-                        <Pressable onPress={() => {this.selectColor('#8d27a7')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#8d27a7',}}></Pressable>
-                        <Pressable onPress={() => {this.selectColor('#ffc0cb')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#ffc0cb',}}></Pressable>
-                        <Pressable onPress={() => {this.selectColor('#2a60c9')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#2a61c8',}}></Pressable>
-                        <Pressable onPress={() => {this.selectColor('#a4a4a4')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#a4a4a4',}}></Pressable>
-                        <Pressable onPress={() => {this.selectColor('#fff')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#fff',   }}></Pressable>
+                        <APressable value={0.50} onPress={() => {this.selectColor('#fe0000')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#fe0000',}}></APressable>
+                        <APressable value={0.50} onPress={() => {this.selectColor('#ff9000')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#ff9000',}}></APressable>
+                        <APressable value={0.50} onPress={() => {this.selectColor('#e1d51f')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#e1d51f',}}></APressable>
+                        <APressable value={0.50} onPress={() => {this.selectColor('#318154')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#318154',}}></APressable>
+                        <APressable value={0.50} onPress={() => {this.selectColor('#8d27a7')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#8d27a7',}}></APressable>
+                        <APressable value={0.50} onPress={() => {this.selectColor('#ffc0cb')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#ffc0cb',}}></APressable>
+                        <APressable value={0.50} onPress={() => {this.selectColor('#2a60c9')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#2a61c8',}}></APressable>
+                        <APressable value={0.50} onPress={() => {this.selectColor('#a4a4a4')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#a4a4a4',}}></APressable>
+                        <APressable value={0.50} onPress={() => {this.selectColor('#fff')}} style={{height: 25, width: 25, borderRadius: 50, backgroundColor: '#fff',   }}></APressable>
 
                     </View>
                 </ScrollView>
@@ -380,6 +393,8 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
         borderRadius: 10,
         backgroundColor: 'rgba(0, 0, 0, 0.22)',
+        width: 150, 
+        height: 50,
     },
 });
 

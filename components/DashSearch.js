@@ -5,6 +5,7 @@ import { View, Text, Animated, StyleSheet, TextInput, Pressable, Image, ScrollVi
 
 import sendData from './sendData';
 import FormatUsername from './FormatUsername';
+import APressable from './APressable';
 
 class DashSearch extends Component {
     constructor(props) {
@@ -97,9 +98,9 @@ class DashSearch extends Component {
                 <View style={styles.searchCont}>
                     <View style={styles.searchInputCont}>
                         <TextInput style={styles.searchInput} placeholder="Search profiles" placeholderTextColor='#a4a4a4' onChange={(e) => this.searchUser(e.nativeEvent.text)} />
-                        <Pressable style={styles.searchBtn}>
+                        <APressable style={styles.searchBtn}>
                             <FontAwesomeIcon icon={faSearch} size={20} color="#a4a4a4" />
-                        </Pressable>
+                        </APressable>
                     </View>
                     {this.state.searchResults.length > 0 && (
                         <ScrollView>
@@ -228,7 +229,8 @@ function SearchedUser({user, friend, addFriend, unaddFriend, confirmAlert, frien
     }
 
     return (
-        <Pressable onPress={() => popupProfile(friend)} style={styles.messageCont}>
+        <APressable onPress={() => popupProfile(friend)} style={styles.messageCont}>
+            <View style={{width: '100%', height: '100%', flexDirection: 'row', justifyContent: 'space-between', }}>
             <View style={styles.messageCont1}>
                 <Image source={{ uri: friend.profilePicture }} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
             </View>
@@ -240,26 +242,29 @@ function SearchedUser({user, friend, addFriend, unaddFriend, confirmAlert, frien
             </View>
             <View style={styles.messageCont3}>
                 {alreadyAdded? (
-                    <Pressable onPress={() => {acceptFriend(friend)}} style={[styles.addBtn, {justifyContent: 'center'}]}>
+                    <APressable onPress={() => {acceptFriend(friend)}} style={[styles.addBtn, {justifyContent: 'center'}]}>
                         <Text style={{color: '#a4a4a4', fontSize: 13}}>Accept</Text>
-                    </Pressable>
+                    </APressable>
                 ): isFriend? (
-                    <Pressable onPress={() => { confirmAlert(`Are you sure you would like to unadd ${friend.username}?`, () => {unaddFriend(friend)})}} style={[styles.addBtn, {justifyContent: 'center'}]}>
+                    <APressable onPress={() => { confirmAlert(`Are you sure you would like to unadd ${friend.username}?`, () => {unaddFriend(friend)})}} style={[styles.addBtn, {justifyContent: 'center'}]}>
                         <Text style={{color: '#a4a4a4', fontSize: 13}}>Friends</Text>
-                    </Pressable>
+                    </APressable>
                 ): added?  (
-                    <Pressable onPress={() => { confirmAlert(`Are you sure you would like to unadd ${friend.username}?`, () => {unaddFriend(friend)})}} style={[styles.addBtn, {justifyContent: 'center'}]}>
+                    <APressable onPress={() => { confirmAlert(`Are you sure you would like to unadd ${friend.username}?`, () => {unaddFriend(friend)})}} style={[styles.addBtn, {justifyContent: 'center'}]}>
                         <Text style={{color: '#a4a4a4', fontSize: 13}}>Added</Text>
-                    </Pressable>
+                    </APressable>
                 ): (
-                    <Pressable style={styles.addBtn} onPress={() => addFriend(friend)}>
-                        <FontAwesomeIcon icon={faPlus} size={16} color="#a4a4a4" />
-                        <Text style={{color: '#a4a4a4', fontSize: 13}}>Add</Text>
-                    </Pressable>
+                    <APressable style={styles.addBtn} onPress={() => addFriend(friend)}>
+                        <View style={{height: '100%', width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                            <FontAwesomeIcon icon={faPlus} size={16} color="#a4a4a4" />
+                            <Text style={{color: '#a4a4a4', fontSize: 13}}>Add</Text>
+                        </View>
+                    </APressable>
                 )}
 
             </View>
-        </Pressable>
+            </View>
+        </APressable>
     );
 }
 

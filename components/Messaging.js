@@ -9,6 +9,7 @@ import FormatUsername from './FormatUsername';
 import keyboardShiftMessages from './animations/keyboardShiftMessages';
 import keyboardShift from './animations/messagingSlide';
 import searchUser from './utils/searchUser';
+import APressable from './APressable';
 
 const animationDuration = 200;
 
@@ -165,7 +166,13 @@ class Messaging extends Component {
         // Update conversation dateActive locally
         this.props.updateOneConversation({...newConversation, dateActive: new Date()})
     }
-
+    formatTime(date) {
+        date = new Date(date);
+        const day = date.toDateString();
+        const localTime = date.toLocaleTimeString();
+        const time = `, ${localTime.split(':').splice(0,2).join(':')} ${localTime.split(' ').splice(1, 1).join('').toLowerCase()}`;
+        return day + time;
+    }
     checkConversation() {
         return this.state.conversation;
     }
@@ -188,16 +195,16 @@ class Messaging extends Component {
                                     let owner = sentMessage?this.state.user:this.state.conversation.members.find(user => user._id === message.sentBy);
                                     const biConvo = this.state.conversation.members.length === 2;
                                     const showUsernameAboveMessage = !sentMessage && !biConvo && ( index===0 || (index>0?messages[index-1].sentBy !== message.sentBy : false ));
-                                    const showDateAboveMessage = index===0 || (index>0?messages[index-1].date - message.date > 3600000 : false);
+                                    const showDateAboveMessage = index===0 || ((message.date - messages[index-1].date) > 3600000);
                                     if (message.type === 'text') {
                                         return (
                                             <Animated.View
                                             key={index}
-                                            style={[styles.message, sentMessage?styles.messageSent:styles.messageRec,  {marginTop: showUsernameAboveMessage || showDateAboveMessage? 35 : 10}, {zIndex: 0, elevation: 0,}]}
+                                            style={[styles.message, sentMessage?styles.messageSent:styles.messageRec,  {marginTop: showUsernameAboveMessage ? 35 : showDateAboveMessage ? 50 : 10}, {zIndex: 0, elevation: 0,}]}
                                             entering={sentMessage ? ZoomInEasyDown : ZoomInEasyUp}
                                             >
                                                 { showUsernameAboveMessage && <Text style={styles.recName}><FormatUsername user={owner} size={13} /></Text>}
-                                                { showDateAboveMessage && <Text style={{ position: 'absolute', width: '100%', textAlign: 'center', top: -25, left: 0, color: '#a4a4a4', fontSize: 15}}>{new Date(message.date).toDateString()}</Text>}
+                                                { showDateAboveMessage && <Text style={{ position: 'absolute', width: '100%', textAlign: 'center', top: -35, left: 0, color: '#a4a4a4', fontSize: 15}}>{this.formatTime(message.date)}</Text>}
                                                 <View style={[styles.messageTypeText, sentMessage?{backgroundColor: '#BE3331'}:{}]}>
                                                     <Text style={{color: 'white', fontSize: 16, fontWeight: '200'}}>{message.content}</Text>
                                                 </View>
@@ -209,9 +216,9 @@ class Messaging extends Component {
                         </anim.View>
 
                         <View style={styles.header}>
-                            <Pressable onPress={this.closeConversation} style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center', zIndex: 10, elevation: 10}}>
+                            <APressable onPress={this.closeConversation} style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center', zIndex: 10, elevation: 10}}>
                                 <FontAwesomeIcon icon={faArrowLeft} size={25} color='white' onPress={() => this.closeConversation()} />
-                            </Pressable>
+                            </APressable>
                             <View>
                                 {this.state.conversation.members.length === 2 && (
                                     <FormatUsername user={this.state.conversation.members.find(guy => guy._id !== this.state.user._id)} size={20} />
@@ -237,9 +244,9 @@ class Messaging extends Component {
                                         if (user._id === this.state.user._id) return null;
                                         return (
                                             <Animated.View key={index} layout={Layout} entering={ZoomIn} exiting={ZoomOut} style={{marginRight: this.state.usersTyping.includes(user._id)?65:0, height: 40, width: 40, marginLeft: 5, borderRadius: 9999, borderWidth: 5, borderColor: '#BE3331', shadowColor: 'black', shadowOffset: {x: 0, y: 0}, shadowRadius: 2, shadowOpacity: 1 }}>
-                                                <Pressable onPress={() => {this.props.popupProfile(user)}}>
+                                                <APressable onPress={() => {this.props.popupProfile(user)}}>
                                                     <Image source={{uri: user.profilePicture}} style={{height: '100%', width: '100%', resizeMode: 'contain', borderRadius: 9999}} />
-                                                </Pressable>
+                                                </APressable>
                                                 {this.state.usersTyping.includes(user._id) && (
                                                 <Animated.View entering={FadeInLeft} exiting={FadeOutLeft} style={{position: 'absolute', height: 40, width: 60, top: -5, left: 40, justifyContent: 'center', alignItems: 'center'}}>
                                                     <Text style={{color: '#a4a4a4', fontSize: 13, }}>typing...</Text>
@@ -252,9 +259,9 @@ class Messaging extends Component {
                                 </ScrollView>
                                 {/* KEYBOARD MAKES THIS VIEW MARGIN BOTTOM 330 from 0 */}
                                 <anim.View style={{width: '100%', height: 70, justifyContent: 'center', alignItems: 'center', marginBottom: this.state.keyboardShiftAnimation.getValue()}}> 
-                                    <Pressable onPress={this.sendText} style={{height: 40, width: 40, borderRadius: 999, backgroundColor: '#BD3230', position: 'absolute', right: 10, top: 25, zIndex: 3, elevation: 3, justifyContent: 'center', alignItems: 'center'}}>
+                                    <APressable value={0.50} onPress={this.sendText} style={{height: 40, width: 40, borderRadius: 999, backgroundColor: '#BD3230', position: 'absolute', right: 10, top: 25, zIndex: 3, elevation: 3, justifyContent: 'center', alignItems: 'center'}}>
                                         <FontAwesomeIcon icon={faArrowUp} size={25} color='white' />
-                                    </Pressable>
+                                    </APressable>
                                     <TextInput value={this.state.inputText} onChange={this.setInputText} multiline={true} onContentSizeChange={this.setTextInputHeight} onFocus={() => {this.state.keyboardShiftAnimation.start(); this.state.messageViewAnimated.open();}} onEndEditing={(e) => {this.state.keyboardShiftAnimation.end(); this.state.messageViewAnimated.close(); this.setTextInputHeight()}} placeholder='Send a message' placeholderTextColor='#a4a4a4' style={[styles.textInput, {height: Platform.OS === 'android' ? this.state.inputTextHeight : this.state.inputTextHeight + 30,}]} />
                                 </anim.View>
                             </View> 

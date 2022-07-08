@@ -6,6 +6,7 @@ import sendData from './sendData';
 import FormatUsername from './FormatUsername';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faGem, faJetFighterUp } from '@fortawesome/free-solid-svg-icons';
+import APressable from './APressable';
 
 class DashProfile extends Component {
     constructor(props) {
@@ -125,12 +126,12 @@ class DashProfile extends Component {
 
                 </View>
 
-                <Pressable onPress={() => {this.openSettings(this.state.user)}} style={[styles.addBtn, {justifyContent: 'center', marginTop: 50}]}>
+                <APressable onPress={() => {this.openSettings(this.state.user)}} style={[styles.addBtn, {justifyContent: 'center', marginTop: 50}]}>
                     <Text style={{color: '#a4a4a4', fontSize: 13, marginLeft: 5}}>Settings</Text>
-                </Pressable>
-                <Pressable onPress={() => {this.confirmAlert('Are you sure you want to logout?', this.logOut)}} style={[styles.addBtn, {justifyContent: 'center', marginTop: 20}]}>
+                </APressable>
+                <APressable onPress={() => {this.confirmAlert('Are you sure you want to logout?', this.logOut)}} style={[styles.addBtn, {justifyContent: 'center', marginTop: 20}]}>
                     <Text style={{color: '#a4a4a4', fontSize: 13, marginLeft: 5}}>Logout</Text>
-                </Pressable>
+                </APressable>
                 <View style={{marginTop: 50, width: '100%'}}>
                     <Text style={{fontSize: 15, color: '#a4a4a4', width: '100%', textAlign: 'center'}}>Joined Sendjet on {new Date(this.state.user.dateJoined).toDateString()}</Text>
                 </View>
@@ -169,6 +170,8 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
         borderRadius: 10,
         backgroundColor: 'rgba(0, 0, 0, 0.22)',
+        width: 150,
+        height: 50,
     },
     premiumCont: {
         marginTop: 20,
