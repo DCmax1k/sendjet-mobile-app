@@ -4,6 +4,7 @@ import React, { Component } from 'react';
 import { View, Keyboard, StyleSheet, SafeAreaView, Image, Pressable, Dimensions, Animated, Platform } from 'react-native';
 
 import DockSlider from './animations/dockSlider';
+import APressable from './APressable';
 
 class DashDock extends Component {
     constructor(props) {
@@ -11,6 +12,7 @@ class DashDock extends Component {
         this.state = { 
             dashPage: props.dashPage,
             keyboard: false,
+            user: props.user,
         };
 
         this.slidePos1 = 0;
@@ -30,6 +32,11 @@ class DashDock extends Component {
         this.keyboardDidHide.remove();
     }
 
+    setUser(user) {
+        this.setState({
+            user: user,
+        });
+    }
 
     setDashPage(page) {
         this.setSlideBarLocation(page);
@@ -60,15 +67,15 @@ class DashDock extends Component {
                             <Animated.View style={[styles.sliderCont, {transform: [{translateX: this.slideAnimation.getValue()}]}]}>
                                 <View style={styles.sliderBar}></View>
                             </Animated.View>
-                            <Pressable onPress={() => {this.setDashPage('search')}} style={styles.dockItem}>
+                            <APressable value={0.75} onPress={() => {this.setDashPage('search')}} style={styles.dockItem}>
                                 <FontAwesomeIcon icon={faSearch} size={30} color={this.state.dashPage==='search'?'#fff':'#a4a4a4'} />
-                            </Pressable>
-                            <Pressable onPress={() => {this.setDashPage('home')}} style={styles.dockItem}>
+                            </APressable>
+                            <APressable value={0.75} onPress={() => {this.setDashPage('home')}} style={styles.dockItem}>
                                 <FontAwesomeIcon icon={faHome} size={30} color={this.state.dashPage==='home'?'#fff':'#a4a4a4'} />
-                            </Pressable>
-                            <Pressable onPress={() => {this.setDashPage('profile')}} style={styles.dockItem}>
-                                <Image style={styles.profileImage} source={require('../assets/roundIcon.png')} />
-                            </Pressable>
+                            </APressable>
+                            <APressable value={0.75} onPress={() => {this.setDashPage('profile')}} style={[styles.dockItem]}>
+                                <Image style={[styles.profileImage]} source={{uri: this.state.user.profilePicture, }} />
+                            </APressable>
                         </SafeAreaView>
                         
                     </View>
@@ -107,9 +114,10 @@ const styles = StyleSheet.create({
 
     },
     profileImage: {
-        height: '60%',
-        width: '60%',
+        height: Dimensions.get('window').width/10,
+        width: Dimensions.get('window').width/10,
         resizeMode: 'contain',
+        borderRadius: Dimensions.get('window').width/10,
     },
     sliderCont: {
         position: 'absolute',

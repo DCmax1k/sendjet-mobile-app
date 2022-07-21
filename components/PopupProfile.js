@@ -2,12 +2,19 @@ import { faGem, faJetFighter, faJetFighterUp, faRocket, faPlus } from '@fortawes
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component, useRef } from 'react';
 import { StyleSheet, Text, View, Dimensions, Image, Animated, Pressable, SafeAreaView, Alert, TextInput, ScrollView } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+
 
 import sendData from './sendData';
 import FormatUsername from './FormatUsername';
 import keyboardShift from './animations/settingsKeyboardShift';
 import formatLastOnline from './utils/formatLastOnline';
 import APressable from './APressable';
+import firebaseConfig from '../firebaseConfig.js';
+
+import { initializeApp } from 'firebase/app';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
+initializeApp(firebaseConfig);
 
 const positionFromBottom = -(Dimensions.get('window').height/3);
 const negHeight = -(Dimensions.get('window').height);
@@ -21,10 +28,10 @@ class PopupProfile extends Component {
             //profile: props.user, // TESTING
             touch: new Animated.Value(negHeight),
             //touch: new Animated.Value(positionFromBottom), // TESTING
-
             selectingColor: '', // prefix or username
             keyboardAnimation: new keyboardShift(),
             isActive: false,
+            changedProfileImage: null,
         };
 
         this.popupProfile = this.popupProfile.bind(this);
@@ -33,6 +40,7 @@ class PopupProfile extends Component {
         this.unaddFriend = this.unaddFriend.bind(this);
         this.acceptFriend = this.acceptFriend.bind(this);
         this.closePopup = this.closePopup.bind(this);
+        this.changeProfileImage = this.changeProfileImage.bind(this);
     }
 
     setUser(user) {
@@ -40,7 +48,7 @@ class PopupProfile extends Component {
     }
 
     popupProfile(profile) {
-        this.setState({ profile: profile, isActive: true, });
+        this.setState({ profile: profile, isActive: true, changedProfileImage: null });
         Animated.spring(this.state.touch, {
             toValue: positionFromBottom,
             useNativeDriver: false,
@@ -193,6 +201,56 @@ class PopupProfile extends Component {
         })
     }
 
+    async changeProfileImage() {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+            maxWidth: 1024,
+            maxHeight: 1024,
+        });
+
+        if (!result.cancelled) {
+            this.setState({
+                changedProfileImage: result.uri,
+            });
+            // update user - emit set to false because it cant send private file://
+            this.props.updateUser({...this.state.user, profilePicture: result.uri}, false)
+
+            // Upload photo
+            const blob = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.onload = function() {
+                  resolve(xhr.response);
+                };
+                xhr.onerror = function(e) {
+                  console.log(e);
+                  reject(new TypeError('Network request failed'));
+                };
+                xhr.responseType = 'blob';
+                xhr.open('GET', result.uri, true);
+                xhr.send(null);
+            });
+            
+            const storage = getStorage();
+            const profileImgRef = ref(storage, this.state.user._id + '/profileImg');
+            const fileRef = ref(profileImgRef, 'image.jpg');
+
+            await uploadBytes(fileRef, blob);
+            const downloadURL = await getDownloadURL(fileRef);
+            
+            blob.close();
+
+            // Send download url to db to set profilePicture
+            const response = await sendData('https://sendjet-app.herokuapp.com/profile/updateprofilepicture', { url: downloadURL });
+            if (response.status !== 'success') {
+                alert('Error changing picture');
+            }
+            
+        }
+    }
+
     render() {
         if (!this.state.profile) {
             return (
@@ -273,11 +331,13 @@ class PopupProfile extends Component {
                     </View>
                 </View>
                 )}
+
+                {/* Settings popup for profile */}
                 {this.state.profile._id === this.state.user._id && (
                 <ScrollView style={{width: '100%', height: '66%', position: 'absolute', top: 30}} contentContainerStyle={{alignItems: 'center'}}>
                     <View style={{justifyContent: 'flex-start', flexDirection: 'row', marginTop: 25, height: 100}}>
-                        <APressable style={{borderRadius: 50, overflow: 'hidden', height: '100%', width: 100, marginRight: 10}}>
-                            <Image style={{width: '100%', height: '100%', position: 'absolute', top: 0, left: 0}} source={{uri: this.state.profile.profilePicture}} />
+                        <APressable onPress={this.changeProfileImage} style={{borderRadius: 50, overflow: 'hidden', height: '100%', width: 100, marginRight: 10}}>
+                            <Image style={styles.profileImage} source={{uri: this.state.changedProfileImage || this.state.profile.profilePicture}} />
                             <View style={{width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)'}}>
                                 <Text style={{fontSize: 12, color: 'white', textAlign: 'center'}}>Change{'\n'}Image</Text>
                             </View>
@@ -396,6 +456,8 @@ const styles = StyleSheet.create({
         width: 150, 
         height: 50,
     },
+    profileImage: {width: '100%', height: '100%', position: 'absolute', top: 0, left: 0},
+
 });
 
 export default PopupProfile;

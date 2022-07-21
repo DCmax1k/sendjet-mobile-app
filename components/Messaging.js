@@ -1,8 +1,9 @@
 import { faArrowLeft, faArrowUp, faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
-import { View, Text, ImageBackground, StyleSheet, Dimensions, Animated as anim, SafeAreaView, Pressable, ScrollView, Image, TextInput, LayoutAnimation, Platform, AppState } from 'react-native';
-import Animated, { ZoomIn, ZoomInEasyDown, ZoomInEasyUp, ZoomOut, SlideInRight, SlideOutRight, SlideInLeft, SlideOutLeft, FadeInLeft, FadeOutLeft, Layout } from 'react-native-reanimated';
+import { View, Text, ImageBackground, StyleSheet, Dimensions, Animated as anim, SafeAreaView, Pressable, ScrollView, Image, TextInput, LayoutAnimation, Platform, AppState, Alert } from 'react-native';
+import Animated, { ZoomIn, ZoomInEasyDown, ZoomInEasyUp, ZoomOut, FadeInLeft, FadeOutLeft, Layout, FadeIn, FadeOut } from 'react-native-reanimated';
+import * as Clipboard from 'expo-clipboard';
 
 import messagingSlide from './animations/messagingSlide';
 import FormatUsername from './FormatUsername';
@@ -10,6 +11,7 @@ import keyboardShiftMessages from './animations/keyboardShiftMessages';
 import keyboardShift from './animations/messagingSlide';
 import searchUser from './utils/searchUser';
 import APressable from './APressable';
+import messageHoldAnimation from './animations/messageHoldAnimation';
 
 const animationDuration = 200;
 
@@ -29,6 +31,8 @@ class Messaging extends Component {
             keyboardShiftAnimation: new keyboardShiftMessages(0, 330, 200),
             messageViewAnimated: new keyboardShift(0, 330, 200),
             appState: AppState.currentState,
+            messageOptions: false,
+            messageOptionsData: null,
         };
 
         this.componentDidMount = this.componentDidMount.bind(this);
@@ -42,6 +46,10 @@ class Messaging extends Component {
         this.sendText = this.sendText.bind(this);
         this.checkConversation = this.checkConversation.bind(this);
         this.setUsersTyping = this.setUsersTyping.bind(this);
+        this.openMessageOptions = this.openMessageOptions.bind(this);
+        this.changeEditMessage = this.changeEditMessage.bind(this);
+        this.saveEdit = this.saveEdit.bind(this);
+        this.deleteText = this.deleteText.bind(this);
 
     }
 
@@ -79,6 +87,7 @@ class Messaging extends Component {
         this.setState({
             conversation: {},
             inChatUsers: [],
+            messageOptions: false,
 
         });
         this.state.slideAnimation.close();
@@ -177,6 +186,106 @@ class Messaging extends Component {
         return this.state.conversation;
     }
 
+    openMessageOptions(message) {
+        this.setState({
+            messageOptions: true,
+            messageOptionsData: message,
+        });
+    }
+    changeEditMessage(e)  {
+        if (this.state.messageOptionsData.sentBy === this.state.user._id) {
+            this.setState({
+                messageOptionsData: {...this.state.messageOptionsData, content: e.nativeEvent.text}
+            });
+        }
+        
+    }
+    async copyText(text) {
+        await Clipboard.setStringAsync(text);
+        this.alertCopied();
+        this.setState({
+            messageOptions: false,
+            messageOptionsData: null,
+        });
+    }
+
+    alertCopied() {
+        Alert.alert(
+            'Text copied to clipboard!',
+            '',
+            [{text: 'OK'}]
+        )
+    }
+
+    confirmAlert(msg, callback) {
+        Alert.alert(
+            'Warning!',
+            msg,
+            [
+                { text: 'Cancel', style: 'cancel', },
+                {
+                    text: 'YES', onPress: callback,
+                }
+            ]
+        )
+    }
+
+    saveEdit() {
+        const allMessages = this.state.conversation.messages;
+        const newMessage = this.state.messageOptionsData;
+        newMessage.edited = true;
+        this.setState({
+            messageOptions: false,
+            messageOptionsData: null,
+        });
+        this.editMessageUpload(newMessage);
+        const oldMessage = allMessages.find(mes => mes.date === newMessage.date);
+        const indexOfMessage = allMessages.indexOf(oldMessage);
+        allMessages.splice(indexOfMessage,1,newMessage);
+        const updatedConversation = {...this.state.conversation, messages: allMessages}
+        this.setState({
+            conversation: updatedConversation,
+        });
+        // update throughout app
+        this.props.updateOneConversation(updatedConversation);
+    }
+    deleteText() {
+        const allMessages = this.state.conversation.messages;
+        const newMessage = this.state.messageOptionsData;
+        newMessage.type = 'deleted';
+        newMessage.content = '';
+        this.setState({
+            messageOptions: false,
+            messageOptionsData: null,
+        });
+        this.editMessageUpload(newMessage);
+        const oldMessage = allMessages.find(mes => mes.date === newMessage.date);
+        const indexOfMessage = allMessages.indexOf(oldMessage);
+        allMessages.splice(indexOfMessage,1,newMessage);
+        const updatedConversation = {...this.state.conversation, messages: allMessages}
+        this.setState({
+            conversation: updatedConversation,
+        });
+        // update throughout app
+        this.props.updateOneConversation(updatedConversation);
+    }
+    editMessageUpload(message) {
+        this.props.socketEmit('messagesEditMessage', {conversationID: this.state.conversation._id, newMessage: message, members: this.state.conversation.members.map(guy => guy._id)});
+    }
+    editMessageFromSocket(newMessage) {
+        const allMessages = this.state.conversation.messages;
+        newMessage.edited = true;
+        const oldMessage = allMessages.find(mes => mes.date === newMessage.date);
+        const indexOfMessage = allMessages.indexOf(oldMessage);
+        allMessages.splice(indexOfMessage,1,newMessage);
+        const updatedConversation = {...this.state.conversation, messages: allMessages}
+        this.setState({
+            conversation: updatedConversation,
+        });
+        // update throughout app
+        this.props.updateOneConversation(updatedConversation);
+    }
+
     render() {
         return (
             <anim.View style={[styles.messaging, {transform: [{translateX: this.state.slideAnimation.getValue()}]}]}>
@@ -196,6 +305,8 @@ class Messaging extends Component {
                                     const biConvo = this.state.conversation.members.length === 2;
                                     const showUsernameAboveMessage = !sentMessage && !biConvo && ( index===0 || (index>0?messages[index-1].sentBy !== message.sentBy : false ));
                                     const showDateAboveMessage = index===0 || ((message.date - messages[index-1].date) > 3600000);
+
+                                    const interactAnim = new messageHoldAnimation();
                                     if (message.type === 'text') {
                                         return (
                                             <Animated.View
@@ -205,11 +316,34 @@ class Messaging extends Component {
                                             >
                                                 { showUsernameAboveMessage && <Text style={styles.recName}><FormatUsername user={owner} size={13} /></Text>}
                                                 { showDateAboveMessage && <Text style={{ position: 'absolute', width: '100%', textAlign: 'center', top: -35, left: 0, color: '#a4a4a4', fontSize: 15}}>{this.formatTime(message.date)}</Text>}
-                                                <View style={[styles.messageTypeText, sentMessage?{backgroundColor: '#BE3331'}:{}]}>
-                                                    <Text style={{color: 'white', fontSize: 16, fontWeight: '200'}}>{message.content}</Text>
-                                                </View>
+                                                
+                                                <Pressable onPressIn={interactAnim.startHolding} onPressOut={interactAnim.stoppedHolding} onLongPress={() => {interactAnim.finishedHolding(); this.openMessageOptions(message)}} style={{maxWidth: '70%', marginBottom: message.type === 'deleted'?0:message.edited?10:0}}>
+                                                    <anim.View style={[styles.messageTypeText, {transform: [{scale: interactAnim.getValue()}]}, sentMessage?{backgroundColor: '#BE3331'}:{}]}>
+                                                        <Text style={{color: 'white', fontSize: 16, fontWeight: '200'}}>{message.content}</Text>
+                                                        { message.edited && <Text style={{ textAlign: 'right', position: 'absolute', bottom: -13, right: 5, color: '#a4a4a4', width: 50, fontSize: 9}}>Edited</Text>}
+                                                    </anim.View>
+                                                    
+                                                </Pressable>
                                             </Animated.View>
                                         );
+                                    } else if (message.type === 'deleted') {
+                                        return (
+                                        <Animated.View
+                                            key={index}
+                                            style={[styles.message, sentMessage?styles.messageSent:styles.messageRec,  {marginTop: showUsernameAboveMessage ? 35 : showDateAboveMessage ? 50 : 10}, {zIndex: 0, elevation: 0,}]}
+                                            entering={sentMessage ? ZoomInEasyDown : ZoomInEasyUp}
+                                            >
+                                                { showDateAboveMessage && <Text style={{ position: 'absolute', width: '100%', textAlign: 'center', top: -35, left: 0, color: '#a4a4a4', fontSize: 15}}>{this.formatTime(message.date)}</Text>}
+                                                
+                                                <Pressable onPressIn={interactAnim.startHolding} onPressOut={interactAnim.stoppedHolding} onLongPress={() => {interactAnim.finishedHolding();}} style={{maxWidth: '70%', marginBottom: message.edited?10:0}}>
+                                                    <anim.View style={[styles.messageTypeText, {transform: [{scale: interactAnim.getValue()}]}, sentMessage?{backgroundColor: '#BE3331'}:{}, {backgroundColor: 'transparent', flexDirection: 'row', }]}>
+                                                        <FormatUsername user={owner} size={13} />
+                                                        <Text style={{color: 'white', fontSize: 13, fontWeight: '200', marginLeft: 5}}>deleted a message</Text>
+                                                    </anim.View>
+                                                    
+                                                </Pressable>
+                                            </Animated.View>
+                                        )
                                     }
                                 })}
                             </ScrollView>
@@ -266,6 +400,49 @@ class Messaging extends Component {
                                 </anim.View>
                             </View> 
                         </View>
+
+                        {/* Editing message menu w/ dark background to press to get out of it */}
+                        { this.state.messageOptions && (
+                            <Animated.View entering={FadeIn} exiting={FadeOut} style={{position: 'absolute', top: 0, left: 0, zIndex: 11, height: Dimensions.get('window').height, width: Dimensions.get('window').width, justifyContent: 'center', alignItems: 'center'}}>
+                                {/* Background */}
+                                <Pressable onPress={() => {this.setState({messageOptions: false})}} style={{width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.5)'}}></Pressable>
+                                {/* Save button for editing message */}
+                                {this.state.messageOptionsData.sentBy === this.state.user._id && (
+                                    <Animated.View entering={ZoomIn} exiting={ZoomOut} style={{width: Dimensions.get('window').width*0.8, height: 40, flexDirection: 'row', justifyContent: 'center', alignItems: 'center'}}>
+                                        <APressable onPress={this.saveEdit} style={{paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#4C5287', borderRadius: 25, marginBottom: 5 }}>
+                                            <Text style={{color: 'white', fontSize: 15}}>Save edit</Text>
+                                        </APressable>
+                                    </Animated.View>
+                                )}
+                                
+                                {/* Message Preview */}
+                                <Animated.View entering={ZoomIn} exiting={ZoomOut} style={{zIndex: 1, shadowColor: 'black', shadowRadius: 5, shadowOffset: {width: 2, height: 2}, shadowOpacity: 0.5, marginBottom: -10, maxHeight: Dimensions.get('window').height*0.4, maxWidth: Dimensions.get('window').width*0.8, backgroundColor: this.state.messageOptionsData.sentBy === this.state.user._id ? '#BE3331':'#5F5F5F', borderRadius: 25, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 10}}>
+                                    {this.state.messageOptionsData.type === 'text' && (
+                                        <TextInput onEndEditing={() => {}} ref={(input) => this.editMessageInput = input} value={this.state.messageOptionsData.content} onChange={this.changeEditMessage} multiline={true} style={{color: 'white', fontSize: 15}}></TextInput>
+                                    )}
+                                </Animated.View>
+                                {/* Actual menu bo */}
+                                <Animated.View entering={ZoomIn} exiting={ZoomOut} style={{zIndex: 0, shadowColor: 'black', shadowRadius: 5, shadowOffset: {width: 2, height: 2}, shadowOpacity: 0.5, height: Dimensions.get('window').height*0.4, width: Dimensions.get('window').width*0.8, backgroundColor: '#323232', borderRadius: 25, alignItems: 'center', justifyContent: 'space-around', padding: 20}}>
+                                    <Text style={{color: 'white', fontSize: 20}}>Message Options:</Text>
+                                    <APressable onPress={() => this.copyText(this.state.messageOptionsData.content)} style={{width: '80%', height: 50, justifyContent: 'center', alignItems: 'center', shadowColor: 'black', shadowRadius: 5, shadowOffset: {width: 2, height: 2}, shadowOpacity: 0.5, backgroundColor: '#434343', borderRadius: 25}}>
+                                        <Text style={{color: 'white', fontSize: 13}}>Copy</Text>
+                                    </APressable>
+                                    {this.state.messageOptionsData.sentBy === this.state.user._id && (
+                                    <APressable onPress={() => {this.editMessageInput.focus()}} style={{width: '80%', height: 50, justifyContent: 'center', alignItems: 'center', shadowColor: 'black', shadowRadius: 5, shadowOffset: {width: 2, height: 2}, shadowOpacity: 0.5, backgroundColor: '#4C5287', borderRadius: 25}}>
+                                        <Text style={{color: 'white', fontSize: 13}}>Edit</Text>
+                                    </APressable>
+                                    )}
+                                    {this.state.messageOptionsData.sentBy === this.state.user._id && (
+                                    <APressable onPress={() => this.confirmAlert('Are you sure you would like to delete this message?', this.deleteText)} style={{width: '80%', height: 50, justifyContent: 'center', alignItems: 'center', shadowColor: 'black', shadowRadius: 5, shadowOffset: {width: 2, height: 2}, shadowOpacity: 0.5, backgroundColor: '#572A2A', borderRadius: 25}}>
+                                        <Text style={{color: 'white', fontSize: 13}}>Delete</Text>
+                                    </APressable>
+                                    )}
+                                    <APressable onPress={() => {this.setState({messageOptions: false})}}  style={{width: '80%', height: 50, justifyContent: 'center', alignItems: 'center',}}>
+                                        <Text style={{color: 'white', fontSize: 9}}>Cancel</Text>
+                                    </APressable>
+                                </Animated.View>
+                            </Animated.View>
+                        )}
                         
 
 
@@ -325,7 +502,7 @@ const styles = StyleSheet.create({
     },
     messageTypeText: {
         backgroundColor: '#5f5f5f',
-        maxWidth: '70%',
+        maxWidth: '100%', // max 70% on pressable parent
         paddingHorizontal: 15,
         paddingVertical: 10,
         borderRadius: 20,

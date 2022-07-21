@@ -139,8 +139,29 @@ class Dashboard extends React.Component {
             if (conversation) {
                 this.updateOneConversation({...conversation, messages: [...conversation.messages, message], dateActive: new Date()});
             }
-
         });
+        this.socket.on('messageEditMessage', ({conversationID, newMessage}) => {
+            const checkConversation = this.checkConversation();
+            if (checkConversation._id) {
+                if (checkConversation._id === conversationID) {
+                    this.state.messaging.current.editMessageFromSocket(newMessage);
+                    return;
+                }
+            }
+            // Update conversation even if not open so it is loaded when user does open it
+            const conversation = this.state.conversations.find(c => c._id === conversationID);
+
+            if (conversation) {
+                const allMessages = conversation.messages;
+                newMessage.edited = true;
+                const oldMessage = allMessages.find(mes => mes.date === newMessage.date);
+                const indexOfMessage = allMessages.indexOf(oldMessage);
+                allMessages.splice(indexOfMessage,1,newMessage);
+                conversation.messages = allMessages;
+                conversation.dateActive = new Date();
+                this.updateOneConversation(conversation);
+            }
+        })
 
         this.socket.on('joinConversationRoom', ({conversationID, userID, inChatUsers}) => {
             if (userID === this.state.user._id) {
@@ -229,6 +250,7 @@ class Dashboard extends React.Component {
         }
         this.state.popupProfile.current.setUser(user);
         this.state.messaging.current.setUser(user);
+        this.state.dashDock.current.setUser(user);
     }
 
     popupProfile(profile) {
@@ -305,7 +327,14 @@ class Dashboard extends React.Component {
                     />
                 </Animated.View>
                 )}
-                <DashDock ref={this.state.dashDock} setDashPage={this.setDashPage} dashPage={this.state.dashPage} fadeOutCurrentPage={this.fadeOutCurrentPage} dashAnimationValue={this.dashAnimation.value} />
+                <DashDock
+                ref={this.state.dashDock}
+                user={this.state.user}
+                setDashPage={this.setDashPage}
+                dashPage={this.state.dashPage}
+                fadeOutCurrentPage={this.fadeOutCurrentPage}
+                dashAnimationValue={this.dashAnimation.value}
+                />
 
                 {/* MESSAGING VIEW */}
                 <Messaging 
