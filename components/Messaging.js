@@ -1,8 +1,8 @@
 import { faArrowLeft, faArrowUp, faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
-import { View, Text, ImageBackground, StyleSheet, Dimensions, Animated as anim, SafeAreaView, Pressable, ScrollView, Image, TextInput, LayoutAnimation, Platform, AppState, Alert } from 'react-native';
-import Animated, { ZoomIn, ZoomInEasyDown, ZoomInEasyUp, ZoomOut, FadeInLeft, FadeOutLeft, Layout, FadeIn, FadeOut } from 'react-native-reanimated';
+import { View, Text, ImageBackground, StyleSheet, Dimensions, Animated, SafeAreaView, Pressable, ScrollView, Image, TextInput, LayoutAnimation, Platform, AppState, Alert } from 'react-native';
+import anima, { ZoomIn, ZoomInEasyDown, ZoomInEasyUp, ZoomOut, FadeInLeft, FadeOutLeft, Layout, FadeIn, FadeOut, SlideInUp, SlideOutDown, SlideInDown } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 
 import messagingSlide from './animations/messagingSlide';
@@ -12,6 +12,7 @@ import keyboardShift from './animations/messagingSlide';
 import searchUser from './utils/searchUser';
 import APressable from './APressable';
 import messageHoldAnimation from './animations/messageHoldAnimation';
+import ConversationMenu from './ConversationMenu';
 
 const animationDuration = 200;
 
@@ -19,6 +20,7 @@ const animationDuration = 200;
 class Messaging extends Component {
     constructor(props) {
         super(props);
+        this.conversationMenu = React.createRef();
         this.state = { 
             user: props.user,
             conversation: {},
@@ -33,6 +35,7 @@ class Messaging extends Component {
             appState: AppState.currentState,
             messageOptions: false,
             messageOptionsData: null,
+            conversationMenuOpen: false,
         };
 
         this.componentDidMount = this.componentDidMount.bind(this);
@@ -50,6 +53,7 @@ class Messaging extends Component {
         this.changeEditMessage = this.changeEditMessage.bind(this);
         this.saveEdit = this.saveEdit.bind(this);
         this.deleteText = this.deleteText.bind(this);
+        this.toggleConversationMenu = this.toggleConversationMenu.bind(this);
 
     }
 
@@ -83,6 +87,7 @@ class Messaging extends Component {
         this.props.socketEmit('joinConversationRoom', {conversationID: conversation._id, userID: this.state.user._id, members: conversation.members});
     }
     closeConversation() {
+        if (this.state.conversationMenuOpen) return this.toggleConversationMenu();
         const conversation = this.state.conversation;
         this.setState({
             conversation: {},
@@ -172,8 +177,8 @@ class Messaging extends Component {
         });
         this.props.socketEmit('isTyping', {conversationID: this.state.conversation._id, userID: this.state.user._id, text:''});
         this.props.socketEmit('sendMessage', {conversationID: this.state.conversation._id, message, members: this.state.conversation.members.map(guy => guy._id) }); // SERVER will update conversation in db, and send message to all users in the chat online or offline, but will just send noti to offline. const rooms = {} on server, with conversation ID as keys, and then array of the useres in that chat. 
-        // Update conversation dateActive locally
-        this.props.updateOneConversation({...newConversation, dateActive: new Date()})
+        // Update conversation dateActive and seenby locally
+        this.props.updateOneConversation({...newConversation, seenBy: [this.state.user._id, ...this.state.inChatUsers], dateActive: new Date()})
     }
     formatTime(date) {
         date = new Date(date);
@@ -242,7 +247,7 @@ class Messaging extends Component {
         const oldMessage = allMessages.find(mes => mes.date === newMessage.date);
         const indexOfMessage = allMessages.indexOf(oldMessage);
         allMessages.splice(indexOfMessage,1,newMessage);
-        const updatedConversation = {...this.state.conversation, messages: allMessages}
+        const updatedConversation = {...this.state.conversation, messages: allMessages, dateActive: new Date()}
         this.setState({
             conversation: updatedConversation,
         });
@@ -262,7 +267,7 @@ class Messaging extends Component {
         const oldMessage = allMessages.find(mes => mes.date === newMessage.date);
         const indexOfMessage = allMessages.indexOf(oldMessage);
         allMessages.splice(indexOfMessage,1,newMessage);
-        const updatedConversation = {...this.state.conversation, messages: allMessages}
+        const updatedConversation = {...this.state.conversation, messages: allMessages, dateActive: new Date()}
         this.setState({
             conversation: updatedConversation,
         });
@@ -278,7 +283,7 @@ class Messaging extends Component {
         const oldMessage = allMessages.find(mes => mes.date === newMessage.date);
         const indexOfMessage = allMessages.indexOf(oldMessage);
         allMessages.splice(indexOfMessage,1,newMessage);
-        const updatedConversation = {...this.state.conversation, messages: allMessages}
+        const updatedConversation = {...this.state.conversation, messages: allMessages, dateActive: new Date()}
         this.setState({
             conversation: updatedConversation,
         });
@@ -286,17 +291,26 @@ class Messaging extends Component {
         this.props.updateOneConversation(updatedConversation);
     }
 
+    toggleConversationMenu() {
+        if (this.conversationMenu.current.state.isOpen) {
+            this.conversationMenu.current.closeMenu()
+        } else {
+            this.conversationMenu.current.openMenu()
+        }
+    }
+
     render() {
         return (
-            <anim.View style={[styles.messaging, {transform: [{translateX: this.state.slideAnimation.getValue()}]}]}>
+            <Animated.View style={[styles.messaging, {transform: [{translateX: this.state.slideAnimation.getValue()}]}]}>
                 <ImageBackground source={require('../assets/background.png')} style={styles.background}>
                     {this.state.conversation._id && (
                     <SafeAreaView style={{flex: 1, width: '100%', }}>
 
-                        <anim.View style={{height: Dimensions.get('window').height, width: '100%', zIndex: 0, elevation: 0, position: 'absolute', bottom: Platform.OS === 'android' ? 0 : this.state.messageViewAnimated.getValue() , left: 0}}>
+                        {/* Messages */}
+                        <Animated.View style={{height: Dimensions.get('window').height, width: '100%', zIndex: 0, elevation: 0, position: 'absolute', bottom: Platform.OS === 'android' ? 0 : this.state.messageViewAnimated.getValue() , left: 0}}>
                             <ScrollView ref={this.state.scrollViewRef} style={{zIndex: 0}} contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1, paddingTop: 130, paddingBottom: 150}}>
                                 
-                                 {/* MAP THROUGH MESSAGES */}
+                                 {/* MAP THROUGH MESSAGES HERE */}
 
                                 {this.state.conversation.messages.sort((a,b) => a.date - b.date).map( (message, index) => {
                                     const messages = this.state.conversation.messages.sort((a,b) => a.date - b.date);
@@ -309,7 +323,7 @@ class Messaging extends Component {
                                     const interactAnim = new messageHoldAnimation();
                                     if (message.type === 'text') {
                                         return (
-                                            <Animated.View
+                                            <anima.View
                                             key={index}
                                             style={[styles.message, sentMessage?styles.messageSent:styles.messageRec,  {marginTop: showUsernameAboveMessage ? 35 : showDateAboveMessage ? 50 : 10}, {zIndex: 0, elevation: 0,}]}
                                             entering={sentMessage ? ZoomInEasyDown : ZoomInEasyUp}
@@ -318,17 +332,17 @@ class Messaging extends Component {
                                                 { showDateAboveMessage && <Text style={{ position: 'absolute', width: '100%', textAlign: 'center', top: -35, left: 0, color: '#a4a4a4', fontSize: 15}}>{this.formatTime(message.date)}</Text>}
                                                 
                                                 <Pressable onPressIn={interactAnim.startHolding} onPressOut={interactAnim.stoppedHolding} onLongPress={() => {interactAnim.finishedHolding(); this.openMessageOptions(message)}} style={{maxWidth: '70%', marginBottom: message.type === 'deleted'?0:message.edited?10:0}}>
-                                                    <anim.View style={[styles.messageTypeText, {transform: [{scale: interactAnim.getValue()}]}, sentMessage?{backgroundColor: '#BE3331'}:{}]}>
+                                                    <Animated.View style={[styles.messageTypeText, {transform: [{scale: interactAnim.getValue()}]}, sentMessage?{backgroundColor: '#BE3331'}:{}]}>
                                                         <Text style={{color: 'white', fontSize: 16, fontWeight: '200'}}>{message.content}</Text>
                                                         { message.edited && <Text style={{ textAlign: 'right', position: 'absolute', bottom: -13, right: 5, color: '#a4a4a4', width: 50, fontSize: 9}}>Edited</Text>}
-                                                    </anim.View>
+                                                    </Animated.View>
                                                     
                                                 </Pressable>
-                                            </Animated.View>
+                                            </anima.View>
                                         );
                                     } else if (message.type === 'deleted') {
                                         return (
-                                        <Animated.View
+                                        <anima.View
                                             key={index}
                                             style={[styles.message, sentMessage?styles.messageSent:styles.messageRec,  {marginTop: showUsernameAboveMessage ? 35 : showDateAboveMessage ? 50 : 10}, {zIndex: 0, elevation: 0,}]}
                                             entering={sentMessage ? ZoomInEasyDown : ZoomInEasyUp}
@@ -336,35 +350,38 @@ class Messaging extends Component {
                                                 { showDateAboveMessage && <Text style={{ position: 'absolute', width: '100%', textAlign: 'center', top: -35, left: 0, color: '#a4a4a4', fontSize: 15}}>{this.formatTime(message.date)}</Text>}
                                                 
                                                 <Pressable onPressIn={interactAnim.startHolding} onPressOut={interactAnim.stoppedHolding} onLongPress={() => {interactAnim.finishedHolding();}} style={{maxWidth: '70%', marginBottom: message.edited?10:0}}>
-                                                    <anim.View style={[styles.messageTypeText, {transform: [{scale: interactAnim.getValue()}]}, sentMessage?{backgroundColor: '#BE3331'}:{}, {backgroundColor: 'transparent', flexDirection: 'row', }]}>
+                                                    <Animated.View style={[styles.messageTypeText, {transform: [{scale: interactAnim.getValue()}]}, sentMessage?{backgroundColor: '#BE3331'}:{}, {backgroundColor: 'transparent', flexDirection: 'row', }]}>
                                                         <FormatUsername user={owner} size={13} />
                                                         <Text style={{color: 'white', fontSize: 13, fontWeight: '200', marginLeft: 5}}>deleted a message</Text>
-                                                    </anim.View>
+                                                    </Animated.View>
                                                     
                                                 </Pressable>
-                                            </Animated.View>
+                                            </anima.View>
                                         )
                                     }
                                 })}
                             </ScrollView>
-                        </anim.View>
+                        </Animated.View>
 
+                        
+
+                        {/* Header */}
                         <View style={styles.header}>
                             <APressable onPress={this.closeConversation} style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center', zIndex: 10, elevation: 10}}>
                                 <FontAwesomeIcon icon={faArrowLeft} size={25} color='white' onPress={() => this.closeConversation()} />
                             </APressable>
-                            <View>
+                            <APressable onPress={this.toggleConversationMenu}>
                                 {this.state.conversation.members.length === 2 && (
                                     <FormatUsername user={this.state.conversation.members.find(guy => guy._id !== this.state.user._id)} size={20} />
                                 )}
                                 {this.state.conversation.members.length !== 2 && (
                                     <Text style={{color: 'white', fontSize: 20}}>{this.state.conversation.title}</Text>
-                                    // Make this a text input later and when someone changes the title, in the chat it says who changed it and to what it changed it too
                                 )}
-                            </View>
+                            </APressable>
                             <View style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center'}}></View>
                         </View>
 
+                        {/* Input and show users in chat here */}
                         <View pointerEvents='box-none' style={{flex: 1, zIndex: 0, elevation: 0,}}>
                            <View style={[styles.inputsCont,]}>
                                 <ScrollView horizontal={true} style={{transform: [{translateY: 15}]}} contentContainerStyle={{flexDirection: 'row', width: '100%', justifyContent: 'flex-start', alignItems: 'flex-end', paddingBottom: 5,}}>
@@ -377,52 +394,52 @@ class Messaging extends Component {
                                         const user = this.state.conversation.members.find(user => user._id === userID);
                                         if (user._id === this.state.user._id) return null;
                                         return (
-                                            <Animated.View key={index} layout={Layout} entering={ZoomIn} exiting={ZoomOut} style={{marginRight: this.state.usersTyping.includes(user._id)?65:0, height: 40, width: 40, marginLeft: 5, borderRadius: 9999, borderWidth: 5, borderColor: '#BE3331', shadowColor: 'black', shadowOffset: {x: 0, y: 0}, shadowRadius: 2, shadowOpacity: 1 }}>
+                                            <anima.View key={index} layout={Layout} entering={ZoomIn} exiting={ZoomOut} style={{marginRight: this.state.usersTyping.includes(user._id)?65:0, height: 40, width: 40, marginLeft: 5, borderRadius: 9999, borderWidth: 5, borderColor: '#BE3331', shadowColor: 'black', shadowOffset: {x: 0, y: 0}, shadowRadius: 2, shadowOpacity: 1 }}>
                                                 <APressable onPress={() => {this.props.popupProfile(user)}}>
                                                     <Image source={{uri: user.profilePicture}} style={{height: '100%', width: '100%', resizeMode: 'contain', borderRadius: 9999}} />
                                                 </APressable>
                                                 {this.state.usersTyping.includes(user._id) && (
-                                                <Animated.View entering={FadeInLeft} exiting={FadeOutLeft} style={{position: 'absolute', height: 40, width: 60, top: -5, left: 40, justifyContent: 'center', alignItems: 'center'}}>
+                                                <anima.View entering={FadeInLeft} exiting={FadeOutLeft} style={{position: 'absolute', height: 40, width: 60, top: -5, left: 40, justifyContent: 'center', alignItems: 'center'}}>
                                                     <Text style={{color: '#a4a4a4', fontSize: 13, }}>typing...</Text>
-                                                </Animated.View>
+                                                </anima.View>
                                                 )}
                                                 
-                                            </Animated.View>
+                                            </anima.View>
                                         )
                                     })}
                                 </ScrollView>
                                 {/* KEYBOARD MAKES THIS VIEW MARGIN BOTTOM 330 from 0 */}
-                                <anim.View style={{width: '100%', height: 70, justifyContent: 'center', alignItems: 'center', marginBottom: this.state.keyboardShiftAnimation.getValue()}}> 
+                                <Animated.View style={{width: '100%', height: 70, justifyContent: 'center', alignItems: 'center', marginBottom: this.state.keyboardShiftAnimation.getValue()}}> 
                                     <APressable value={0.50} onPress={this.sendText} style={{height: 40, width: 40, borderRadius: 999, backgroundColor: '#BD3230', position: 'absolute', right: 10, top: 25, zIndex: 3, elevation: 3, justifyContent: 'center', alignItems: 'center'}}>
                                         <FontAwesomeIcon icon={faArrowUp} size={25} color='white' />
                                     </APressable>
                                     <TextInput value={this.state.inputText} onChange={this.setInputText} multiline={true} onContentSizeChange={this.setTextInputHeight} onFocus={() => {this.state.keyboardShiftAnimation.start(); this.state.messageViewAnimated.open();}} onEndEditing={(e) => {this.state.keyboardShiftAnimation.end(); this.state.messageViewAnimated.close(); this.setTextInputHeight()}} placeholder='Send a message' placeholderTextColor='#a4a4a4' style={[styles.textInput, {height: Platform.OS === 'android' ? this.state.inputTextHeight : this.state.inputTextHeight + 30,}]} />
-                                </anim.View>
+                                </Animated.View>
                             </View> 
                         </View>
 
                         {/* Editing message menu w/ dark background to press to get out of it */}
                         { this.state.messageOptions && (
-                            <Animated.View entering={FadeIn} exiting={FadeOut} style={{position: 'absolute', top: 0, left: 0, zIndex: 11, height: Dimensions.get('window').height, width: Dimensions.get('window').width, justifyContent: 'center', alignItems: 'center'}}>
+                            <anima.View entering={FadeIn} exiting={FadeOut} style={{position: 'absolute', top: 0, left: 0, zIndex: 11, height: Dimensions.get('window').height, width: Dimensions.get('window').width, justifyContent: 'center', alignItems: 'center'}}>
                                 {/* Background */}
                                 <Pressable onPress={() => {this.setState({messageOptions: false})}} style={{width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, backgroundColor: 'rgba(0,0,0,0.5)'}}></Pressable>
                                 {/* Save button for editing message */}
                                 {this.state.messageOptionsData.sentBy === this.state.user._id && (
-                                    <Animated.View entering={ZoomIn} exiting={ZoomOut} style={{width: Dimensions.get('window').width*0.8, height: 40, flexDirection: 'row', justifyContent: 'center', alignItems: 'center'}}>
+                                    <anima.View entering={ZoomIn} exiting={ZoomOut} style={{width: Dimensions.get('window').width*0.8, height: 40, flexDirection: 'row', justifyContent: 'center', alignItems: 'center'}}>
                                         <APressable onPress={this.saveEdit} style={{paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#4C5287', borderRadius: 25, marginBottom: 5 }}>
                                             <Text style={{color: 'white', fontSize: 15}}>Save edit</Text>
                                         </APressable>
-                                    </Animated.View>
+                                    </anima.View>
                                 )}
                                 
                                 {/* Message Preview */}
-                                <Animated.View entering={ZoomIn} exiting={ZoomOut} style={{zIndex: 1, shadowColor: 'black', shadowRadius: 5, shadowOffset: {width: 2, height: 2}, shadowOpacity: 0.5, marginBottom: -10, maxHeight: Dimensions.get('window').height*0.4, maxWidth: Dimensions.get('window').width*0.8, backgroundColor: this.state.messageOptionsData.sentBy === this.state.user._id ? '#BE3331':'#5F5F5F', borderRadius: 25, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 10}}>
+                                <anima.View entering={ZoomIn} exiting={ZoomOut} style={{zIndex: 1, shadowColor: 'black', shadowRadius: 5, shadowOffset: {width: 2, height: 2}, shadowOpacity: 0.5, marginBottom: -10, maxHeight: Dimensions.get('window').height*0.4, maxWidth: Dimensions.get('window').width*0.8, backgroundColor: this.state.messageOptionsData.sentBy === this.state.user._id ? '#BE3331':'#5F5F5F', borderRadius: 25, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 10}}>
                                     {this.state.messageOptionsData.type === 'text' && (
                                         <TextInput onEndEditing={() => {}} ref={(input) => this.editMessageInput = input} value={this.state.messageOptionsData.content} onChange={this.changeEditMessage} multiline={true} style={{color: 'white', fontSize: 15}}></TextInput>
                                     )}
-                                </Animated.View>
+                                </anima.View>
                                 {/* Actual menu bo */}
-                                <Animated.View entering={ZoomIn} exiting={ZoomOut} style={{zIndex: 0, shadowColor: 'black', shadowRadius: 5, shadowOffset: {width: 2, height: 2}, shadowOpacity: 0.5, height: Dimensions.get('window').height*0.4, width: Dimensions.get('window').width*0.8, backgroundColor: '#323232', borderRadius: 25, alignItems: 'center', justifyContent: 'space-around', padding: 20}}>
+                                <anima.View entering={ZoomIn} exiting={ZoomOut} style={{zIndex: 0, shadowColor: 'black', shadowRadius: 5, shadowOffset: {width: 2, height: 2}, shadowOpacity: 0.5, height: Dimensions.get('window').height*0.4, width: Dimensions.get('window').width*0.8, backgroundColor: '#323232', borderRadius: 25, alignItems: 'center', justifyContent: 'space-around', padding: 20}}>
                                     <Text style={{color: 'white', fontSize: 20}}>Message Options:</Text>
                                     <APressable onPress={() => this.copyText(this.state.messageOptionsData.content)} style={{width: '80%', height: 50, justifyContent: 'center', alignItems: 'center', shadowColor: 'black', shadowRadius: 5, shadowOffset: {width: 2, height: 2}, shadowOpacity: 0.5, backgroundColor: '#434343', borderRadius: 25}}>
                                         <Text style={{color: 'white', fontSize: 13}}>Copy</Text>
@@ -440,17 +457,22 @@ class Messaging extends Component {
                                     <APressable onPress={() => {this.setState({messageOptions: false})}}  style={{width: '80%', height: 50, justifyContent: 'center', alignItems: 'center',}}>
                                         <Text style={{color: 'white', fontSize: 9}}>Cancel</Text>
                                     </APressable>
-                                </Animated.View>
-                            </Animated.View>
+                                </anima.View>
+                            </anima.View>
                         )}
-                        
-
+                        <ConversationMenu
+                                ref={this.conversationMenu}
+                                conversation={this.state.conversation}
+                                user={this.state.user}
+                                popupProfile={this.props.popupProfile}
+                                updateUser={this.props.updateUser}
+                                />
 
 
                     </SafeAreaView>
                     )}
                 </ImageBackground>
-            </anim.View>
+            </Animated.View>
         );
     }
 }

@@ -424,6 +424,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 1,
         padding: 20,
         paddingTop: 70,
+        zIndex: 13,
     },
     gestureCont: {
         position: 'absolute',

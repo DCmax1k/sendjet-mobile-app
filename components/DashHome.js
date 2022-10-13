@@ -9,6 +9,7 @@ import FormatUsername from './FormatUsername';
 import formatLastOnline from './utils/formatLastOnline';
 import searchUser from './utils/searchUser';
 import APressable from './APressable';
+import ConversationMenu from './ConversationMenu';
 
 class DashHome extends Component {
   constructor(props) {
@@ -245,6 +246,10 @@ class DashHome extends Component {
 
   }
 
+  openConvoMenu(convo) {
+    this.props.openConversationMenu(convo);
+  }
+
   render() {
     return (
       <Animated.View style={{opacity: this.fadeInAnimation.value, flexDirection: 'column', alignItems: 'center', height: Dimensions.get('window').height*.7}}>
@@ -347,7 +352,7 @@ class DashHome extends Component {
                 <FontAwesomeIcon icon={this.state.focusedWidget==='messages'?faTimes:faHandPointer} size={20} color="#fff" />
               </View>
             </View>
-            <ScrollView style={styles.messagesScrollView}>
+            <ScrollView scrollEnabled={this.state.focusedWidget === 'messages'?true:false} style={styles.messagesScrollView}>
               {this.state.conversations.length === 0 && (
                 <View style={styles.noMessages}>
                   <Text style={{color: '#a4a4a4', fontSize: 17}}>No conversations yet</Text>
@@ -364,29 +369,39 @@ class DashHome extends Component {
                 return (
                   <APressable key={index} onPress={() => this.selectConvo(conversation)} style={styles.messageContCont}>
                     <View style={styles.messageCont}>
-                    {/* Show popup with the list of users in group chat if group chat with - this.props.popupProfile(users) - */}
-                    <View style={styles.messageCont1}>
-                      <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/groupChat.png')} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
-                    </View>
-                    <View style={styles.messageCont2}>
-                      <View style={styles.conversationTitle}>
+                      <APressable style={styles.messageCont1} onPress={() => {this.openConvoMenu(conversation)}}>
+                        <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/groupChat.png')} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
+                      </APressable>
+                      <View style={styles.messageCont2}>
+                        <View style={styles.conversationTitle}>
+                          {biConvo ? (
+                            <FormatUsername size={20} user={otherPerson} />
+                          ) : (
+                            <Text style={{color: 'white', fontSize: 20}}>{conversation.title}</Text>
+                          )}
+                          
+                        </View>
                         {biConvo ? (
-                          <FormatUsername size={20} user={otherPerson} />
+                          <Text style={{color: '#838383'}}>{otherPerson.firstName + ' ' + otherPerson.lastName}</Text>
                         ) : (
-                          <Text style={{color: 'white', fontSize: 20}}>{conversation.title}</Text>
+                          <Text style={{color: '#838383'}}>{conversation.members.length} members</Text>
                         )}
                         
                       </View>
-                      {biConvo ? (
-                        <Text style={{color: '#838383'}}>{otherPerson.firstName + ' ' + otherPerson.lastName}</Text>
-                      ) : (
-                        <Text style={{color: '#838383'}}>{conversation.members.length} members</Text>
-                      )}
-                      
-                    </View>
-                    <View style={styles.messageCont3}>
-              
-                    </View>
+                      <View style={styles.messageCont3}>
+                          <View>
+                            {conversation.messages[conversation.messages.length - 1].sentBy === this.state.user._id ? conversation.seenBy.filter(u => u !== this.state.user._id).length > 0 ? (
+                              <Image source={require('../assets/conversationSeenStatus/sentOpened.png')} style={styles.convoSeenStatusStyle} />
+                            ) : (<Image source={require('../assets/conversationSeenStatus/sent.png')} style={styles.convoSeenStatusStyle} />) : conversation.seenBy.includes(this.state.user._id) ? (
+                              <Image source={require('../assets/conversationSeenStatus/receivedOpened.png')} style={styles.convoSeenStatusStyle} />
+                            ) : (
+                              <Image source={require('../assets/conversationSeenStatus/received.png')} style={styles.convoSeenStatusStyle} />
+                            )}
+                          </View>
+                          <View>
+                              <Text style={{fontSize: 15, color: '#BE3331', fontWeight: 'bold'}}>{formatLastOnline(conversation.dateActive)}</Text>
+                          </View>
+                      </View>
                     </View>
                   </APressable>
                 );
@@ -404,7 +419,7 @@ class DashHome extends Component {
                 <FontAwesomeIcon icon={this.state.focusedWidget==='friends'?faTimes:faHandPointer} size={20} color="#fff" />
               </View>
             </View>
-            <ScrollView style={[styles.friendsScrollView]} contentContainerStyle={{justifyContent: 'flex-start', alignItems: 'flex-start',}}>
+            <ScrollView scrollEnabled={this.state.focusedWidget === 'friends'?true:false} style={[styles.friendsScrollView]} contentContainerStyle={{justifyContent: 'flex-start', alignItems: 'flex-start',}}>
               {this.state.user.friends.length === 0 && (
                 <View style={styles.noMessages}>
                   <Text style={{color: '#a4a4a4', fontSize: 17}}>No friends added yet</Text>
@@ -443,7 +458,6 @@ class DashHome extends Component {
           </APressable> 
 
         </ScrollView>
-
         
 
       </Animated.View>
@@ -644,6 +658,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
 
+  },
+  convoSeenStatusStyle: {
+    width: 30,
+    height: 30,
   }
 
 });

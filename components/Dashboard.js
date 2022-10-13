@@ -13,6 +13,7 @@ import PopupProfile from './PopupProfile';
 import fadeIn from './animations/fadeIn';
 import fadeOut from './animations/fadeOut';
 import Messaging from './Messaging';
+import ConversationMenu from './ConversationMenu';
 
 class Dashboard extends React.Component {
     constructor(props) {
@@ -28,6 +29,8 @@ class Dashboard extends React.Component {
             dashSearch: React.createRef(),
             dashProfile: React.createRef(),
             messaging: React.createRef(),
+            conversationMenu: React.createRef(),
+
         }
 
         this.animation = new fadeIn(500);
@@ -50,6 +53,7 @@ class Dashboard extends React.Component {
         this.openConversation = this.openConversation.bind(this);
         this.updateOneConversation = this.updateOneConversation.bind(this);
         this.checkConversation = this.checkConversation.bind(this);
+        this.openConversationMenu = this.openConversationMenu.bind(this);
 
     }
 
@@ -131,13 +135,17 @@ class Dashboard extends React.Component {
             if (checkConversation._id) {
                 if (checkConversation._id === conversationID) {
                     this.state.messaging.current.pushMessage(message);
+                    const conversation = this.state.conversations.find(c => c._id === conversationID);
+                    const seenBy = [...conversation.seenBy, this.state.user._id];
+                    this.updateOneConversation({...conversation, messages: [...conversation.messages, message], dateActive: new Date(), seenBy});
                     return;
                 }
             }
             // Update conversation even if not open so it is loaded when user does open it
             const conversation = this.state.conversations.find(c => c._id === conversationID);
+            const seenBy = [];
             if (conversation) {
-                this.updateOneConversation({...conversation, messages: [...conversation.messages, message], dateActive: new Date()});
+                this.updateOneConversation({...conversation, messages: [...conversation.messages, message], dateActive: new Date(), seenBy});
             }
         });
         this.socket.on('messageEditMessage', ({conversationID, newMessage}) => {
@@ -167,9 +175,24 @@ class Dashboard extends React.Component {
             if (userID === this.state.user._id) {
                 // You joined room, set the users already in room
                 this.state.messaging.current.setInChatUsers(inChatUsers);
+                const conversation = this.state.conversations.find(c => c._id === conversationID);
+                conversation.seenBy = [...conversation.seenBy, this.state.user._id];
+                this.updateOneConversation(conversation);
             } else {
                 // Someone else joined the room
-                this.state.messaging.current.addInChatUser(userID);
+
+                // Add them in chat to see they are in chat
+                const checkConversation = this.checkConversation();
+                if (checkConversation._id) {
+                    if (checkConversation._id === conversationID) {
+                        this.state.messaging.current.addInChatUser(userID);
+                    }
+                }
+
+                // Update seen by status
+                const conversation = this.state.conversations.find(c => c._id === conversationID);
+                conversation.seenBy = [this.state.user._id, userID];
+                this.updateOneConversation(conversation);
             }
         });
 
@@ -268,6 +291,11 @@ class Dashboard extends React.Component {
         this.state.messaging.current.openConversation(conversation);
     }
 
+    openConversationMenu(convo) {
+        this.state.conversationMenu.current.setConvo(convo);
+        this.state.conversationMenu.current.openMenu();
+    }
+
     render() {
         return (
             <Animated.View style={[{opacity: this.animation.value, height: '100%', width: '100%'}]}>
@@ -297,6 +325,8 @@ class Dashboard extends React.Component {
                     getCurrentlyOnline={this.getCurrentlyOnline}
                     socketEmit={this.socketEmit}
                     openConversation={this.openConversation}
+                     openConversationMenu={this.openConversationMenu}
+
                     />
                 </Animated.View>
                 )}
@@ -347,7 +377,14 @@ class Dashboard extends React.Component {
                 popupProfile={this.popupProfile}
                 />
 
-                {/* PROFILE POP UP WIDGET */}
+                <ConversationMenu
+                    ref={this.state.conversationMenu}
+                    user={this.state.user}
+                    popupProfile={this.popupProfile}
+                    updateUser={this.updateUser}
+                    />
+
+                    {/* PROFILE POP UP WIDGET */}
                 <PopupProfile
                 ref={this.state.popupProfile}
                 user={this.state.user}
