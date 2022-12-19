@@ -14,7 +14,7 @@ export default function Connecting(props) {
     });
 
     async function checkLogin() {
-        const response = await sendData('https://sendjet-app.herokuapp.com/dashboard', {});
+        const response = await sendData('https://sendjet-server.glitch.me/dashboard', {});
         animation.continue = false;
         animation.finish();
         setTimeout(() => {

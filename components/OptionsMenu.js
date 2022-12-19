@@ -22,14 +22,14 @@ class OptionsMenu extends Component {
         return (
                 <anim.View entering={FadeInDown} exiting={FadeOut}  style={[{width: Dimensions.get('window').width*0.95, padding: 10,}]}>
 
-                    <Pressable onPress={this.closeMenu} onPressIn={this.submitBackgroundAnimation.transition1} onPressOut={this.submitBackgroundAnimation.transition2} style={{ width: '100%', height: 50, borderRadius: 10, marginBottom: 15, shadowColor: 'black', shadowOpacity: 1, shadowRadius: 3, shadowOffset: {width: 0, height: 0} }}>
+                    <Pressable onPress={this.closeMenu} onPressIn={this.submitBackgroundAnimation.transition1} onPressOut={this.submitBackgroundAnimation.transition2} style={{ width: '100%', height: 50, borderRadius: 10, marginBottom: 15, shadowColor: 'black', shadowOpacity: 1, shadowRadius: 1, shadowOffset: {width: 0, height: 0} }}>
                         <Animated.View style={{ justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%', backgroundColor: this.submitBackgroundAnimation.getValue(), borderRadius: 10 }} >
                             <Text style={{color: '#ECECEC', fontSize: 18, fontWeight: '900'}} >Done</Text>
                         </Animated.View>
                         
                     </Pressable>
 
-                    <View style={{ backgroundColor: '#252525', width: '100%', backgroundColor: '#252525', borderRadius: 10, shadowColor: 'black', shadowOpacity: 1, shadowRadius: 3, shadowOffset: {width: 0, height: 0} }}>
+                    <View style={{ backgroundColor: '#252525', width: '100%', backgroundColor: '#252525', borderRadius: 10, shadowColor: 'black', shadowOpacity: 1, shadowRadius: 1, shadowOffset: {width: 0, height: 0} }}>
                         {this.state.buttons.map((btn, i) => {
                             const buttonAnimation = new colorFade('#252525', '#3E3E3E');
                             return(

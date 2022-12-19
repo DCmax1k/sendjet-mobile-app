@@ -141,7 +141,7 @@ function SignupInputs({setPage}) {
             password: password,
         }
         setSubmitText('Loading...')
-        const response = await sendData('https://sendjet-app.herokuapp.com/signup', userData);
+        const response = await sendData('https://sendjet-server.glitch.me/signup', userData);
         setSubmitText('Create Account!');
         if (response.status !== 'success') return alert(response.status);
         setPage('connecting');
@@ -230,7 +230,7 @@ function LoginInputs({setPage}) {
             password: password,
         }
         setSubmitText('Loading...')
-        const response = await sendData('https://sendjet-app.herokuapp.com/login', userData);
+        const response = await sendData('https://sendjet-server.glitch.me/login', userData);
         setSubmitText('Login');
         if (response.status !== 'success') return alert(response.status);
         setPage('connecting');

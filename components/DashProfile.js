@@ -33,14 +33,14 @@ class DashProfile extends Component {
     }
 
     async logOut() {
-        const response = await sendData('https://sendjet-app.herokuapp.com/login/logout', {});
+        const response = await sendData('https://sendjet-server.glitch.me/login/logout', {});
         if (response.status !== 'success') return alert('Error logging out');
         this.props.setPage('connecting');
     }
 
     async refreshApp() {
         this.setState({refreshing: true});
-        const response = await sendData('https://sendjet-app.herokuapp.com/dashboard', {});
+        const response = await sendData('https://sendjet-server.glitch.me/dashboard', {});
         if (response.status !== 'success') return alert('Error refreshing app');
         let conversations = response.conversations;
         if (!conversations) conversations = [];

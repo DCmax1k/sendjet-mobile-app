@@ -54,11 +54,11 @@ class ConversationMenu extends Component {
         if (!user.pinnedConversations.includes(conversation._id)) {
             user.pinnedConversations.push(conversation._id);
             this.props.updateUser(user, false);
-            sendData('https://sendjet-app.herokuapp.com/messages/pinconversation', {conversationID: conversation._id});
+            sendData('https://sendjet-server.glitch.me/messages/pinconversation', {conversationID: conversation._id});
         } else {
             user.pinnedConversations.splice(user.pinnedConversations.indexOf(conversation._id), 1);
             this.props.updateUser(user, false);
-            sendData('https://sendjet-app.herokuapp.com/messages/unpinconversation', {conversationID: conversation._id});
+            sendData('https://sendjet-server.glitch.me/messages/unpinconversation', {conversationID: conversation._id});
         }
     }
     leaveConversation() {

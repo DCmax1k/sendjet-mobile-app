@@ -93,7 +93,7 @@ class DashHome extends Component {
       lastSentBy: this.state.user._id,
       seenBy: [this.state.user._id],
     };
-    const response = await sendData('https://sendjet-app.herokuapp.com/messages/createconversation', convoData);
+    const response = await sendData('https://sendjet-server.glitch.me/messages/createconversation', convoData);
     if (response.status !== 'success') return alert('Error creating conversation');
     convoData.members = [this.state.user, ...members];
     convoData._id = response.convo._id;
@@ -151,7 +151,7 @@ class DashHome extends Component {
           friends: this.state.user.friends.filter(u => u._id !== friend._id),
       },
   });
-    const response = await sendData('https://sendjet-app.herokuapp.com/search/unadduser', { id: friend._id });
+    const response = await sendData('https://sendjet-server.glitch.me/search/unadduser', { id: friend._id });
     if (response.status !== 'success') return alert('Error removing user');
     this.props.socketEmit('unadduser', { user: this.state.user, unadding: user });
     this.props.updateUser({
@@ -171,7 +171,7 @@ class DashHome extends Component {
     });
     
     if (this.state.user.friendRequests.length === 1) this.focusWidget('');
-    const response = await sendData('https://sendjet-app.herokuapp.com/search/acceptfriendrequest', {id: friend._id});
+    const response = await sendData('https://sendjet-server.glitch.me/search/acceptfriendrequest', {id: friend._id});
     if (response.status !== 'success') return alert('Error accepting friend request');
     this.props.updateUser({
       ...this.state.user,
@@ -203,7 +203,7 @@ class DashHome extends Component {
       }
     });
     if (this.state.user.friendRequests.length === 1) this.focusWidget('');
-    const response = await sendData('https://sendjet-app.herokuapp.com/search/declinefriendrequest', {id: friend._id});
+    const response = await sendData('https://sendjet-server.glitch.me/search/declinefriendrequest', {id: friend._id});
     if (response.status !== 'success') return alert('Error declining friend request');
     this.props.socketEmit('declinefriendrequest', { user: this.state.user, friend, });
     this.props.updateUser({
@@ -214,7 +214,7 @@ class DashHome extends Component {
 
   async refreshApp() {
     this.setState({refreshing: true});
-    const response = await sendData('https://sendjet-app.herokuapp.com/dashboard', {});
+    const response = await sendData('https://sendjet-server.glitch.me/dashboard', {});
     if (response.status !== 'success') return alert('Error refreshing app');
     let conversations = response.conversations;
     if (!conversations) conversations = [];
@@ -390,13 +390,13 @@ class DashHome extends Component {
                       </View>
                       <View style={styles.messageCont3}>
                           <View>
-                            {conversation.messages[conversation.messages.length - 1].sentBy === this.state.user._id ? conversation.seenBy.filter(u => u !== this.state.user._id).length > 0 ? (
+                            { conversation.messages.length > 0 ? conversation.messages[conversation.messages.length - 1].sentBy === this.state.user._id ? conversation.seenBy.filter(u => u !== this.state.user._id).length > 0 ? (
                               <Image source={require('../assets/conversationSeenStatus/sentOpened.png')} style={styles.convoSeenStatusStyle} />
                             ) : (<Image source={require('../assets/conversationSeenStatus/sent.png')} style={styles.convoSeenStatusStyle} />) : conversation.seenBy.includes(this.state.user._id) ? (
                               <Image source={require('../assets/conversationSeenStatus/receivedOpened.png')} style={styles.convoSeenStatusStyle} />
                             ) : (
                               <Image source={require('../assets/conversationSeenStatus/received.png')} style={styles.convoSeenStatusStyle} />
-                            )}
+                            ) : null}
                           </View>
                           <View>
                               <Text style={{fontSize: 15, color: '#BE3331', fontWeight: 'bold'}}>{formatLastOnline(conversation.dateActive)}</Text>
