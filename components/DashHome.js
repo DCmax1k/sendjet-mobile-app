@@ -1,4 +1,4 @@
-import { faBan, faCheck, faCommentMedical, faComments, faDownLeftAndUpRightToCenter, faEllipsis, faHandPointer, faSearch, faTimes, faUpRightAndDownLeftFromCenter, faUserGroup, faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import { faBan, faCheck, faCommentMedical, faComments, faDownLeftAndUpRightToCenter, faEllipsis, faHandPointer, faSearch, faThumbtack, faTimes, faUpRightAndDownLeftFromCenter, faUserGroup, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
 import { View, Text, Animated, StyleSheet, ScrollView, Image, Pressable, TextInput, RefreshControl, Alert, Dimensions } from 'react-native';
@@ -251,6 +251,10 @@ class DashHome extends Component {
   }
 
   render() {
+    //const pinnedConversations = this.state.conversations.filter(conversation => this.state.user.pinnedConversations.includes(conversation._id)).sort((a, b) => this.state.conversations.indexOf(a._id) - this.state.conversations.indexOf(b._id));
+    const pinnedConversations = this.state.user.pinnedConversations.map(id => this.state.conversations.find(conversation => conversation._id === id));
+    const notPinnedConversations = this.state.conversations.filter(conversation => !this.state.user.pinnedConversations.includes(conversation._id)).sort((a, b) => new Date(b.dateActive).getTime() - new Date(a.dateActive).getTime());
+    const sortedConversations = [...pinnedConversations, ...notPinnedConversations];
     return (
       <Animated.View style={{opacity: this.fadeInAnimation.value, flexDirection: 'column', alignItems: 'center', height: Dimensions.get('window').height*.7}}>
         <ScrollView refreshControl={<RefreshControl refreshing={this.state.refreshing} onRefresh={this.refreshApp} />} scrollEnabled={this.state.focusedWidget?false:true} style={{width: '100%'}} contentContainerStyle={{justifyContent: 'flex-start', alignItems: 'center'}}>
@@ -359,7 +363,7 @@ class DashHome extends Component {
                 </View>
               )}
               
-              {this.state.conversations.sort((a, b) => new Date(b.dateActive).getTime() - new Date(a.dateActive).getTime()).map((conversation, index) => {
+              { sortedConversations.map((conversation, index) => {
                 let biConvo = conversation.members.length===2?true:false;
                 let otherPerson = null;
                 if (biConvo) {
@@ -367,10 +371,14 @@ class DashHome extends Component {
                 }
               
                 return (
-                  <APressable key={index} onPress={() => this.selectConvo(conversation)} style={styles.messageContCont}>
+                  <APressable key={index} onLongPress={() => {this.openConvoMenu(conversation)}} onPress={() => this.selectConvo(conversation)} style={styles.messageContCont}>
                     <View style={styles.messageCont}>
                       <APressable style={styles.messageCont1} onPress={() => {this.openConvoMenu(conversation)}}>
-                        <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/groupChat.png')} style={{height: 40, width: 40, resizeMode: 'contain', borderRadius: 20}} />
+                        <View style={{height: 40, width: 40}}>
+                          <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/groupChat.png')} style={{height: '100%', width: '100%', resizeMode: 'contain', borderRadius: 20}} />
+                          {this.state.user.pinnedConversations.includes(conversation._id) ? <FontAwesomeIcon icon={faThumbtack} style={{position: 'absolute', top: -20, left: -5, height: 15, width: 15, fontSize: 10, color: 'rgb(150, 0, 2)', transform: [{ rotate: '-45deg' }]}} /> : null}
+                        </View>
+                        
                       </APressable>
                       <View style={styles.messageCont2}>
                         <View style={styles.conversationTitle}>

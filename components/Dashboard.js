@@ -58,7 +58,7 @@ class Dashboard extends React.Component {
     }
 
     componentDidMount() {
-        this.socket = io('https://sendjet-app.herokuapp.com');
+        this.socket = io('https://sendjet-server.glitch.me');
 
         this.socket.on('connect', () => {
             console.log('connected');

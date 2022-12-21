@@ -39,7 +39,7 @@ class APressable extends React.Component {
         return (
             
                 <Animated.View {...this.props} style={[this.props.style, {transform: [{scale: this.state.value}]}]} >
-                    <Pressable onPress={this.props.onPress}  onPressIn={this.start} onPressOut={this.end} style={{height: '100%', width: '100%', justifyContent: 'center', alignItems: 'center'}}>
+                    <Pressable onPress={this.props.onPress} onLongPress={this.props.onLongPress}  onPressIn={this.start} onPressOut={this.end} style={{height: '100%', width: '100%', justifyContent: 'center', alignItems: 'center'}}>
                 
                     {this.props.children}
 
