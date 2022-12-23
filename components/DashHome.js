@@ -1,7 +1,7 @@
 import { faBan, faCheck, faCommentMedical, faComments, faDownLeftAndUpRightToCenter, faEllipsis, faHandPointer, faSearch, faThumbtack, faTimes, faUpRightAndDownLeftFromCenter, faUserGroup, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
-import { View, Text, Animated, StyleSheet, ScrollView, Image, Pressable, TextInput, RefreshControl, Alert, Dimensions } from 'react-native';
+import { View, Text, Animated, StyleSheet, ScrollView, Image, Pressable, TextInput, RefreshControl, Alert, Dimensions, AppState } from 'react-native';
 
 import fadeIn from './animations/fadeIn';
 import sendData from './sendData';
@@ -15,6 +15,7 @@ class DashHome extends Component {
   constructor(props) {
     super(props);
     this.state = { 
+      appState: 'active',
       user: props.user,
       conversations: props.conversations,
       userDataFromConversations: [],
@@ -34,6 +35,7 @@ class DashHome extends Component {
     this.selectConvo = this.selectConvo.bind(this);
     this.addConversation = this.addConversation.bind(this);
     this.focusWidget = this.focusWidget.bind(this);
+    this.handleAppState = this.handleAppState.bind(this);
 
     this.refreshApp = this.refreshApp.bind(this);
 
@@ -41,6 +43,20 @@ class DashHome extends Component {
 
   componentDidMount() {
     this.fadeInAnimation.start();
+    // Listen for app status changes to refresh the app when reopened.
+    AppState.addEventListener('change', this.handleAppState);
+  }
+  componentWillUnmount() {
+    AppState.removeEventListener('change', this.handleAppState);
+  }
+
+  handleAppState(state) {
+    if ((this.state.appState === 'background' || 'inactive') && state === 'active') {
+      this.refreshApp();
+    }
+    this.setState({
+      appState: state,
+    });
   }
 
   setUser(user) {
@@ -396,6 +412,7 @@ class DashHome extends Component {
                         )}
                         
                       </View>
+                      
                       <View style={styles.messageCont3}>
                           <View>
                             { conversation.messages.length > 0 ? conversation.messages[conversation.messages.length - 1].sentBy === this.state.user._id ? conversation.seenBy.filter(u => u !== this.state.user._id).length > 0 ? (

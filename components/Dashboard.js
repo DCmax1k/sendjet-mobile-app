@@ -2,6 +2,8 @@ import { faHome, faPerson, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React from 'react';
 import { StyleSheet, Text, View, Animated, Image, SafeAreaView } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import io from 'socket.io-client';
 
 
@@ -14,6 +16,7 @@ import fadeIn from './animations/fadeIn';
 import fadeOut from './animations/fadeOut';
 import Messaging from './Messaging';
 import ConversationMenu from './ConversationMenu';
+import sendData from './sendData';
 
 class Dashboard extends React.Component {
     constructor(props) {
@@ -56,6 +59,41 @@ class Dashboard extends React.Component {
         this.openConversationMenu = this.openConversationMenu.bind(this);
 
     }
+
+    registerForPushNotificationsAsync = async () => {
+        if (Device.isDevice) {
+          const { status: existingStatus } = await Notifications.getPermissionsAsync();
+          let finalStatus = existingStatus;
+          if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+          }
+          if (finalStatus !== 'granted') {
+            alert('Failed to get push token for push notification!');
+            return;
+          }
+          const token = (await Notifications.getExpoPushTokenAsync()).data;
+          console.log(token);
+          this.setState({
+            user: {
+                ...this.state.user,
+                expoPushToken: token
+            }
+          });
+          sendData('https://sendjet-server.glitch.me/profile/setpushtoken', {token})
+        } else {
+          alert('Must use physical device for Push Notifications');
+        }
+      
+        if (Platform.OS === 'android') {
+          Notifications.setNotificationChannelAsync('default', {
+            name: 'default',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#FF231F7C',
+          });
+        }
+      };
 
     componentDidMount() {
         this.socket = io('https://sendjet-server.glitch.me');
@@ -191,7 +229,7 @@ class Dashboard extends React.Component {
 
                 // Update seen by status
                 const conversation = this.state.conversations.find(c => c._id === conversationID);
-                conversation.seenBy = [this.state.user._id, userID];
+                conversation.seenBy = [userID];
                 this.updateOneConversation(conversation);
             }
         });
@@ -206,6 +244,7 @@ class Dashboard extends React.Component {
             }
         });
 
+        this.registerForPushNotificationsAsync();
     }
 
     componentWillUnmount() {

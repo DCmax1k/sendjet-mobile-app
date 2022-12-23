@@ -25,7 +25,9 @@
     "react-native-web": "0.17.7",
     "socket.io-client": "^4.5.1",
     "expo-haptics": "~11.2.0",
-    "expo-clipboard": "~3.0.1"
+    "expo-clipboard": "~3.0.1",
+    "expo-device": "~4.2.0",
+    "expo-notifications": "~0.15.4"
   },
   "devDependencies": {
     "@babel/core": "^7.12.9"
