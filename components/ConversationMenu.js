@@ -22,12 +22,11 @@ class ConversationMenu extends Component {
         super(props);
         this.state = {
             isOpen: false,
+            user: this.props.user || {},
             conversation: this.props.conversation || {},
             optionsMenu: false,
             pinTitle: 'Pin Conversation',
         };
-
-        this.user = this.props.user || {},
 
         this.closeMenu = this.closeMenu.bind(this);
         this.setConvo = this.setConvo.bind(this);
@@ -49,38 +48,46 @@ class ConversationMenu extends Component {
         console.log('add user');
     }
     async changeGroupName(newTitle) {
-        const message = {
-            type: 'changedgroupname',
-            content: newTitle,
-            date: Date.now(),
-            sentBy: this.user._id,
-            edited: false,
-        };
-        const conversation = {
-            ...this.state.conversation,
-            title: newTitle,
-            messages: [...this.state.conversation.messages, message],
-        };
-        this.setState({
-            conversation,
-        });
-        this.props.updateOneConversation(conversation);
-        await sendData('https://sendjet-server.glitch.me/messages/changegroupname', {conversationID: this.state.conversation._id, newTitle});
-        this.props.socketEmit('sendMessage', {conversationID: this.state.conversation._id, message, members: this.state.conversation.members.map(guy => guy._id)});
+        try {
+            const message = {
+                type: 'changedgroupname',
+                content: newTitle,
+                date: Date.now(),
+                sentBy: this.state.user._id,
+                edited: false,
+            };
+            const conversation = {
+                ...this.state.conversation,
+                title: newTitle,
+                messages: [...this.state.conversation.messages, message],
+            };
+            this.setState({
+                conversation,
+            });
+            
+            this.props.updateOneConversation(conversation);
+            await sendData('https://sendjet-server.glitch.me/messages/changegroupname', {conversationID: this.state.conversation._id, newTitle});
+            this.props.socketEmit('sendMessage', {conversationID: this.state.conversation._id, message, members: this.state.conversation.members.map(guy => guy._id)});
+        } catch(err) {
+            console.error(err);
+        }
+        
     }
     selectGroupName() {
         this.threeEllipse();
         this.groupNameInputRef.current.focus();
     }
     pinConversation() {
-        const user = this.props.user;
+        const user = this.state.user;
         const conversation = this.state.conversation;
         if (!user.pinnedConversations.includes(conversation._id)) {
             user.pinnedConversations.push(conversation._id);
+            this.setState({user})
             this.props.updateUser(user, false);
             sendData('https://sendjet-server.glitch.me/messages/pinconversation', {conversationID: conversation._id});
         } else {
             user.pinnedConversations.splice(user.pinnedConversations.indexOf(conversation._id), 1);
+            this.setState({user})
             this.props.updateUser(user, false);
             sendData('https://sendjet-server.glitch.me/messages/unpinconversation', {conversationID: conversation._id});
         }
@@ -135,11 +142,11 @@ class ConversationMenu extends Component {
         });
     }
     checkPinTitle() {
-        if (this.user.pinnedConversations.includes(this.state.conversation._id) && this.state.pinTitle != 'Unpin Conversation') {
+        if (this.state.user.pinnedConversations.includes(this.state.conversation._id) && this.state.pinTitle != 'Unpin Conversation') {
             this.setState({
                 pinTitle: 'Unpin Conversation',
             });
-        } else if (!this.user.pinnedConversations.includes(this.state.conversation._id) && this.state.pinTitle != 'Pin Conversation') {
+        } else if (!this.state.user.pinnedConversations.includes(this.state.conversation._id) && this.state.pinTitle != 'Pin Conversation') {
             this.setState({
                 pinTitle: 'Pin Conversation',
             });
@@ -162,7 +169,7 @@ class ConversationMenu extends Component {
         const privateMessageOptions = [button01, button02, button03];
         
         const biConvo = this.state.conversation.members.length==2;
-        const otherPerson = this.state.conversation.members.find(u => u._id !== this.user._id);
+        const otherPerson = this.state.conversation.members.find(u => u._id !== this.state.user._id);
         return (
             <anim.View entering={SlideInDown} exiting={SlideOutDown} style={{zIndex: 12, height: Dimensions.get('window').height, width: Dimensions.get('window').width, position: 'absolute', top: 0, left: 0}}>
                 <View style={{height: '100%', width: '100%', backgroundColor: '#270E23', flexDirection: 'column', alignItems: 'center', paddingTop: Platform.OS === 'ios'?50:0}}>
@@ -202,7 +209,7 @@ class ConversationMenu extends Component {
                                 {/* Loop through members here */}
                                 {this.state.conversation.members.map((member, i) => {
                                     return (
-                                        <APressable key={i} style={{height: 60, width: '100%'}} value={0.95} onPress={() => {member._id != this.user._id ? this.props.popupProfile(member):null}}>
+                                        <APressable key={i} style={{height: 60, width: '100%'}} value={0.95} onPress={() => {member._id != this.state.user._id ? this.props.popupProfile(member):null}}>
                                             <View style={{height: '100%', width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start'}}>
                                                 <Image source={{uri: member.profilePicture}} style={{height: 40, width: 40, marginRight: 15, borderRadius: 50}} />
                                                 <FormatUsername size={15} user={member} />

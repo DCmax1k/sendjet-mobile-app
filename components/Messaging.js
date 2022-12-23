@@ -484,6 +484,8 @@ class Messaging extends Component {
                                 user={this.state.user}
                                 popupProfile={this.props.popupProfile}
                                 updateUser={this.props.updateUser}
+                                updateOneConversation={this.props.updateOneConversation}
+                                socketEmit={this.props.socketEmit}
                                 />
 
 

@@ -18,6 +18,14 @@ import Messaging from './Messaging';
 import ConversationMenu from './ConversationMenu';
 import sendData from './sendData';
 
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: false,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    }),
+});
+
 class Dashboard extends React.Component {
     constructor(props) {
         super(props);
@@ -82,7 +90,7 @@ class Dashboard extends React.Component {
           });
           sendData('https://sendjet-server.glitch.me/profile/setpushtoken', {token})
         } else {
-          alert('Must use physical device for Push Notifications');
+          //alert('Must use physical device for Push Notifications');
         }
       
         if (Platform.OS === 'android') {
@@ -244,8 +252,24 @@ class Dashboard extends React.Component {
             }
         });
 
+        // Ask for push notis permission
         this.registerForPushNotificationsAsync();
+
+        // Handle received push notis
+        Notifications.addNotificationReceivedListener(this._handleNotification);
+        Notifications.addNotificationResponseReceivedListener(this._handleNotificationResponse);
     }
+
+    // Handle received notification when app is in foreground immidiately
+    _handleNotification = notification => {
+        this.setState({ notification: notification });
+        console.log(notification)
+      };
+    
+      // Handle with push noti is clicked on no matter app status
+    _handleNotificationResponse = response => {
+        console.log(response);
+    };
 
     componentWillUnmount() {
         console.log('unmounting');
@@ -423,6 +447,7 @@ class Dashboard extends React.Component {
                     updateUser={this.updateUser}
                     updateOneConversation={this.updateOneConversation}
                     socketEmit={this.socketEmit}
+                    // conversation={this.state.conversation}
                     />
 
                     {/* PROFILE POP UP WIDGET */}
