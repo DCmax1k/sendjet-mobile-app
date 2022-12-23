@@ -44,10 +44,10 @@ class DashHome extends Component {
   componentDidMount() {
     this.fadeInAnimation.start();
     // Listen for app status changes to refresh the app when reopened.
-    AppState.addEventListener('change', this.handleAppState);
+    this.appStateChangeListener = AppState.addEventListener('change', this.handleAppState);
   }
   componentWillUnmount() {
-    AppState.removeEventListener('change', this.handleAppState);
+    this.appStateChangeListener.remove();
   }
 
   handleAppState(state) {

@@ -1,7 +1,7 @@
 import { faArrowLeft, faArrowUp, faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { Component } from 'react';
-import {View, Text, SafeAreaView, Platform, Image, Dimensions, StyleSheet, ScrollView, Animated, Alert} from 'react-native';
+import {View, Text, SafeAreaView, Platform, Image, Dimensions, StyleSheet, ScrollView, Animated, Alert, TextInput} from 'react-native';
 import anim, {SlideOutDown, SlideInDown } from 'react-native-reanimated';
 
 import APressable from './APressable';
@@ -32,12 +32,15 @@ class ConversationMenu extends Component {
         this.closeMenu = this.closeMenu.bind(this);
         this.setConvo = this.setConvo.bind(this);
         this.threeEllipse = this.threeEllipse.bind(this);
+        this.selectGroupName = this.selectGroupName.bind(this);
         this.addUser = this.addUser.bind(this);
         this.changeGroupName = this.changeGroupName.bind(this);
         this.pinConversation = this.pinConversation.bind(this);
         this.leaveConversation = this.leaveConversation.bind(this);
         this.reportUser = this.reportUser.bind(this);
         this.blockUser = this.blockUser.bind(this);
+
+        this.groupNameInputRef = React.createRef();
         
 
     }
@@ -45,8 +48,29 @@ class ConversationMenu extends Component {
     addUser() {
         console.log('add user');
     }
-    changeGroupName() {
-        console.log('changed group name');
+    async changeGroupName(newTitle) {
+        const message = {
+            type: 'changedgroupname',
+            content: newTitle,
+            date: Date.now(),
+            sentBy: this.user._id,
+            edited: false,
+        };
+        const conversation = {
+            ...this.state.conversation,
+            title: newTitle,
+            messages: [...this.state.conversation.messages, message],
+        };
+        this.setState({
+            conversation,
+        });
+        this.props.updateOneConversation(conversation);
+        await sendData('https://sendjet-server.glitch.me/messages/changegroupname', {conversationID: this.state.conversation._id, newTitle});
+        this.props.socketEmit('sendMessage', {conversationID: this.state.conversation._id, message, members: this.state.conversation.members.map(guy => guy._id)});
+    }
+    selectGroupName() {
+        this.threeEllipse();
+        this.groupNameInputRef.current.focus();
     }
     pinConversation() {
         const user = this.props.user;
@@ -127,7 +151,7 @@ class ConversationMenu extends Component {
         if (!this.state.isOpen) return <View></View>;
         // Group message options
         const button1 = new OptionButton('Add User', '#ECECEC', this.addUser); 
-        const button2 = new OptionButton('Change Group Name', '#ECECEC', this.changeGroupName); 
+        const button2 = new OptionButton('Change Group Name', '#ECECEC', this.selectGroupName); 
         const button3 = new OptionButton(this.state.pinTitle, '#ECECEC', this.pinConversation); 
         const button4 = new OptionButton('Leave Conversation', '#C11D1D', this.leaveConversation); 
         const groupMessageOptions = [button1, button2, button3, button4];
@@ -162,7 +186,8 @@ class ConversationMenu extends Component {
                             <View style={{alignItems: 'center'}}>
                                 <Image source={ biConvo?{uri: otherPerson.profilePicture}:require('../assets/groupChat.png')} style={{marginBottom: 20, height: Dimensions.get('window').width/3, width: Dimensions.get('window').width/3, resizeMode: 'contain', borderRadius: 999999}} />
                                     {!biConvo ? (
-                                        <Text style={{color: 'white', fontSize: 20}}>{this.state.conversation.title}</Text>
+                                        <TextInput ref={this.groupNameInputRef} onChangeText={(e) => { this.setState({conversation: {...this.state.conversation, title: e}}) }} onEndEditing={(e) => {this.changeGroupName(e.nativeEvent.text)}} style={{color: 'white', fontSize: 20}} value={this.state.conversation.title} />
+
                                     ) : (
                                         <FormatUsername size={25} user={otherPerson} />
                                     )}

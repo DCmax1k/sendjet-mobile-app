@@ -364,7 +364,7 @@ class Dashboard extends React.Component {
                     getCurrentlyOnline={this.getCurrentlyOnline}
                     socketEmit={this.socketEmit}
                     openConversation={this.openConversation}
-                     openConversationMenu={this.openConversationMenu}
+                    openConversationMenu={this.openConversationMenu}
 
                     />
                 </Animated.View>
@@ -421,6 +421,8 @@ class Dashboard extends React.Component {
                     user={this.state.user}
                     popupProfile={this.popupProfile}
                     updateUser={this.updateUser}
+                    updateOneConversation={this.updateOneConversation}
+                    socketEmit={this.socketEmit}
                     />
 
                     {/* PROFILE POP UP WIDGET */}

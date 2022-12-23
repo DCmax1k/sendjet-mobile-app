@@ -358,6 +358,24 @@ class Messaging extends Component {
                                                 </Pressable>
                                             </anima.View>
                                         )
+                                    } else if (message.type === 'changedgroupname') {
+                                        return (
+                                            <anima.View
+                                                key={index}
+                                                style={[{marginTop: showUsernameAboveMessage ? 35 : showDateAboveMessage ? 50 : 10}]}
+                                                entering={sentMessage ? ZoomInEasyDown : ZoomInEasyUp}
+                                                >
+                                                    { showDateAboveMessage && <Text style={{ position: 'absolute', width: '100%', textAlign: 'center', top: -35, left: 0, color: '#a4a4a4', fontSize: 15}}>{this.formatTime(message.date)}</Text>}
+                                                    
+                                                    <Pressable onPressIn={interactAnim.startHolding} onPressOut={interactAnim.stoppedHolding} onLongPress={() => {interactAnim.finishedHolding();}} style={{display: 'flex', alignItems: 'center',  maxWidth: '100%', marginBottom: message.edited?10:0, minHeight: 1}}>
+                                                        <Animated.View style={{display: 'flex', justifyContent: 'center', alignItems: 'center', transform: [{scale: interactAnim.getValue()}]}}>
+                                                            <FormatUsername user={owner} size={13} />
+                                                            <Text style={{ maxWidth: Dimensions.get('screen').width, color: 'white', fontSize: 13, fontWeight: '200', paddingLeft: 10, paddingRight: 10, minHeight: 1,}}>changed the group name to <Text style={{fontWeight: '900'}}>{message.content}</Text></Text>
+                                                        </Animated.View>
+                                                        
+                                                    </Pressable>
+                                                </anima.View>
+                                            )
                                     }
                                 })}
                             </ScrollView>
