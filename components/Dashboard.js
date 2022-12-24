@@ -183,7 +183,10 @@ class Dashboard extends React.Component {
                     this.state.messaging.current.pushMessage(message);
                     const conversation = this.state.conversations.find(c => c._id === conversationID);
                     const seenBy = [...conversation.seenBy, this.state.user._id];
-                    this.updateOneConversation({...conversation, messages: [...conversation.messages, message], dateActive: new Date(), seenBy});
+                    conversation.dateActive = new Date();
+                    conversation.seenBy = seenBy;
+                    message.type == 'changedgroupname' ? conversation.title = message.content : null;
+                    this.updateOneConversation(conversation);
                     return;
                 }
             }
@@ -191,7 +194,11 @@ class Dashboard extends React.Component {
             const conversation = this.state.conversations.find(c => c._id === conversationID);
             const seenBy = [];
             if (conversation) {
-                this.updateOneConversation({...conversation, messages: [...conversation.messages, message], dateActive: new Date(), seenBy});
+                conversation.messages.push(message);
+                conversation.dateActive = new Date();
+                conversation.seenBy = seenBy;
+                message.type == 'changedgroupname' ? conversation.title = message.content : null;
+                this.updateOneConversation(conversation);
             }
         });
         this.socket.on('messageEditMessage', ({conversationID, newMessage}) => {

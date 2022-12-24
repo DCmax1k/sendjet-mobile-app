@@ -56,15 +56,10 @@ class ConversationMenu extends Component {
                 sentBy: this.state.user._id,
                 edited: false,
             };
-            const conversation = {
-                ...this.state.conversation,
-                title: newTitle,
-                messages: [...this.state.conversation.messages, message],
-            };
-            this.setState({
-                conversation,
-            });
-            
+            const conversation = this.state.conversation;
+            conversation.title = newTitle;
+            conversation.messages.push(message);
+            this.setState({conversation});
             this.props.updateOneConversation(conversation);
             await sendData('https://sendjet-server.glitch.me/messages/changegroupname', {conversationID: this.state.conversation._id, newTitle});
             this.props.socketEmit('sendMessage', {conversationID: this.state.conversation._id, message, members: this.state.conversation.members.map(guy => guy._id)});

@@ -54,6 +54,7 @@ class Messaging extends Component {
         this.saveEdit = this.saveEdit.bind(this);
         this.deleteText = this.deleteText.bind(this);
         this.toggleConversationMenu = this.toggleConversationMenu.bind(this);
+        this.updateOneConversation = this.updateOneConversation.bind(this);
 
     }
 
@@ -299,7 +300,18 @@ class Messaging extends Component {
         }
     }
 
+    updateOneConversation(conversation) {
+        this.setState({conversation});
+        this.props.updateOneConversation(conversation)
+    }
+
     render() {
+        const messages = this.state.conversation.messages;
+        let stateMessages;
+        if (messages) {
+            stateMessages = messages.filter(msg => messages.indexOf(msg) > messages.length - 20);
+        }
+        
         return (
             <Animated.View style={[styles.messaging, {transform: [{translateX: this.state.slideAnimation.getValue()}]}]}>
                 <ImageBackground source={require('../assets/background.png')} style={styles.background}>
@@ -312,8 +324,8 @@ class Messaging extends Component {
                                 
                                  {/* MAP THROUGH MESSAGES HERE */}
 
-                                {this.state.conversation.messages.sort((a,b) => a.date - b.date).map( (message, index) => {
-                                    const messages = this.state.conversation.messages.sort((a,b) => a.date - b.date);
+                                {stateMessages.sort((a,b) => a.date - b.date).map( (message, index) => {
+                                    const messages = stateMessages.sort((a,b) => a.date - b.date);
                                     const sentMessage = message.sentBy === this.state.user._id;
                                     let owner = sentMessage?this.state.user:this.state.conversation.members.find(user => user._id === message.sentBy);
                                     const biConvo = this.state.conversation.members.length === 2;
@@ -484,7 +496,7 @@ class Messaging extends Component {
                                 user={this.state.user}
                                 popupProfile={this.props.popupProfile}
                                 updateUser={this.props.updateUser}
-                                updateOneConversation={this.props.updateOneConversation}
+                                updateOneConversation={this.updateOneConversation}
                                 socketEmit={this.props.socketEmit}
                                 />
 
