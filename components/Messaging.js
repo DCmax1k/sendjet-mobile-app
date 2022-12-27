@@ -400,12 +400,12 @@ class Messaging extends Component {
                             <APressable onPress={this.closeConversation} style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center', zIndex: 10, elevation: 10}}>
                                 <FontAwesomeIcon icon={faArrowLeft} size={25} color='white' onPress={() => this.closeConversation()} />
                             </APressable>
-                            <APressable onPress={this.toggleConversationMenu}>
+                            <APressable onPress={this.toggleConversationMenu} style={{backgroundColor: 'rgb(50, 50, 50)', borderRadius: 9999, paddingHorizontal: 40, maxHeight: 50, maxWidth: Dimensions.get('screen').width*0.8, minWidth: 40}}>
                                 {this.state.conversation.members.length === 2 && (
                                     <FormatUsername user={this.state.conversation.members.find(guy => guy._id !== this.state.user._id)} size={20} />
                                 )}
                                 {this.state.conversation.members.length !== 2 && (
-                                    <Text style={{color: 'white', fontSize: 20}}>{this.state.conversation.title}</Text>
+                                    <Text style={{color: 'white', fontSize: 20, fontWeight: 'bold'}}>{this.state.conversation.title}</Text>
                                 )}
                             </APressable>
                             <View style={{width: 50, height: '100%', justifyContent: 'center', alignItems: 'center'}}></View>

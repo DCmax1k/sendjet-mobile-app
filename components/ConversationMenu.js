@@ -8,6 +8,7 @@ import APressable from './APressable';
 import FormatUsername from './FormatUsername';
 import OptionsMenu from './OptionsMenu';
 import sendData from './sendData';
+import SelectFriends from './SelectFriends';
 
 class OptionButton {
     constructor(title, color, cb) {
@@ -26,6 +27,7 @@ class ConversationMenu extends Component {
             conversation: this.props.conversation || {},
             optionsMenu: false,
             pinTitle: 'Pin Conversation',
+            selectFriendsOpen: false,
         };
 
         this.closeMenu = this.closeMenu.bind(this);
@@ -45,7 +47,13 @@ class ConversationMenu extends Component {
     }
     // OptionsMenuFunctions
     addUser() {
-        console.log('add user');
+        // Show friends list, and when done will call addUserReturn
+        this.setState({
+            selectFriendsOpen: !this.state.selectFriendsOpen
+        });
+    }
+    addUserReturn(friendsAdded) {
+        console.log(friendsAdded);
     }
     async changeGroupName(newTitle) {
         try {
@@ -119,7 +127,7 @@ class ConversationMenu extends Component {
     openMenu() {
         this.setState({
             isOpen: true,
-
+            selectFriendsOpen: false,
         })
     }
 
@@ -127,6 +135,7 @@ class ConversationMenu extends Component {
         this.setState({
             isOpen: false,
             positionFromTop: 0,
+            selectFriendsOpen: false,
         })
     }
 
@@ -178,8 +187,13 @@ class ConversationMenu extends Component {
                             </APressable>
                         </View>
 
+                        {/* Absolute pos options menus and other pop ups */}
                         <View style={{position: 'absolute', top: 100, left: 0, width: Dimensions.get('window').width, zIndex: 10, alignItems: 'center'}} pointerEvents='box-none'>
                             {this.state.optionsMenu ? <OptionsMenu closeMenu={this.threeEllipse} buttons={ biConvo ? privateMessageOptions : groupMessageOptions} /> : null} 
+                        </View>
+
+                        <View style={{position: 'absolute', top: 150, left: Dimensions.get('window').width*0.05, width: Dimensions.get('window').width*0.9, zIndex: 10, alignItems: 'center'}} pointerEvents='box-none'>
+                            {this.state.selectFriendsOpen ? <SelectFriends user={this.state.user} addUsersReturn={this.addUserReturn} members={this.state.conversation.members.map(member => member._id)} closeMenu={this.addUser} /> : null} 
                         </View>
 
                             {/* Main content in scroll view */}
