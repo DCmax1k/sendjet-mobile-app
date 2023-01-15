@@ -69,7 +69,7 @@ class ConversationMenu extends Component {
             conversation.messages.push(message);
             this.setState({conversation});
             this.props.updateOneConversation(conversation);
-            await sendData('https://sendjet-server.glitch.me/messages/changegroupname', {conversationID: this.state.conversation._id, newTitle});
+            await sendData('/messages/changegroupname', {conversationID: this.state.conversation._id, newTitle});
             this.props.socketEmit('sendMessage', {conversationID: this.state.conversation._id, message, members: this.state.conversation.members.map(guy => guy._id)});
         } catch(err) {
             console.error(err);
@@ -87,16 +87,30 @@ class ConversationMenu extends Component {
             user.pinnedConversations.push(conversation._id);
             this.setState({user})
             this.props.updateUser(user, false);
-            sendData('https://sendjet-server.glitch.me/messages/pinconversation', {conversationID: conversation._id});
+            sendData('/messages/pinconversation', {conversationID: conversation._id});
         } else {
             user.pinnedConversations.splice(user.pinnedConversations.indexOf(conversation._id), 1);
             this.setState({user})
             this.props.updateUser(user, false);
-            sendData('https://sendjet-server.glitch.me/messages/unpinconversation', {conversationID: conversation._id});
+            sendData('/messages/unpinconversation', {conversationID: conversation._id});
         }
     }
     leaveConversation() {
-        console.log('leave converastion');
+        // Update state of screen
+        this.props.removeConversation(this.state.conversation._id);
+        // Send data to server
+        sendData('/messages/leaveconversation', {conversationID: this.state.conversation._id});
+        // Send socket message that you left conversation
+        const message = {
+            type: 'leftconversation',
+            content: "",
+            date: Date.now(),
+            sentBy: this.state.user._id,
+            edited: false,
+        };
+        this.props.socketEmit('sendMessage', {conversationID: this.state.conversation._id, message, members: this.state.conversation.members.map(guy => guy._id)});
+        // Redirect back to home page
+
     }
     reportUser() {
         console.log('reporting user');
@@ -168,9 +182,10 @@ class ConversationMenu extends Component {
         const groupMessageOptions = [button1, button2, button3, button4];
         // Private message options
         const button01 = new OptionButton(this.state.pinTitle, '#ECECEC', this.pinConversation);
+        const button04 = new OptionButton('Leave Conversation', '#C11D1D', this.leaveConversation); 
         const button02 = new OptionButton('Report', '#C11D1D', this.reportUser); 
         const button03 = new OptionButton('Block', '#C11D1D', this.blockUser); 
-        const privateMessageOptions = [button01, button02, button03];
+        const privateMessageOptions = [button01, button04, button02, button03];
         
         const biConvo = this.state.conversation.members.length==2;
         const otherPerson = this.state.conversation.members.find(u => u._id !== this.state.user._id);

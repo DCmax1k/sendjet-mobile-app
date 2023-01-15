@@ -69,7 +69,7 @@ class PopupProfile extends Component {
                 addRequests: [...this.state.user.addRequests, user]
             }
         });
-        const response = await sendData('https://sendjet-server.glitch.me/search/adduser', { id: user._id });
+        const response = await sendData('/search/adduser', { id: user._id });
         if (response.status !== 'success') return alert('Error adding user');
         this.props.socketEmit('adduser', { user: this.state.user, adding: user });
         this.props.updateUser({...this.state.user, addRequests: this.state.user.addRequests});
@@ -82,7 +82,7 @@ class PopupProfile extends Component {
                 friends: this.state.user.friends.filter(u => u._id !== user._id),
             },
         });
-        const response = await sendData('https://sendjet-server.glitch.me/search/unadduser', { id: user._id });
+        const response = await sendData('/search/unadduser', { id: user._id });
         if (response.status !== 'success') return alert('Error removing user');
         this.props.socketEmit('unadduser', { user: this.state.user, unadding: user });
         this.props.updateUser({
@@ -99,7 +99,7 @@ class PopupProfile extends Component {
                 friends: [...this.state.user.friends, friend],
             }
         });
-        const response = await sendData('https://sendjet-server.glitch.me/search/acceptfriendrequest', {id: friend._id});
+        const response = await sendData('/search/acceptfriendrequest', {id: friend._id});
         if (response.status !== 'success') return alert('Error accepting friend request');
         this.props.socketEmit('acceptfriendrequest', { user: this.state.user, friend, });
         this.props.updateUser({
@@ -141,37 +141,37 @@ class PopupProfile extends Component {
         this.setState({profile: {...this.state.profile, username: text, }});
     }
     async submitFirstName(name) {
-        const response = await sendData('https://sendjet-server.glitch.me/profile/changefirstname', {name,});
+        const response = await sendData('/profile/changefirstname', {name,});
         if (response.status !== 'success') return alert('Error changing first name');
         this.props.updateUser({...this.state.user, firstName: name,});
     }
     async submitLastName(name) {
-        const response = await sendData('https://sendjet-server.glitch.me/profile/changelastname', {name,});
+        const response = await sendData('/profile/changelastname', {name,});
         if (response.status !== 'success') return alert('Error changing last name');
         this.props.updateUser({...this.state.user, lastName: name,});
     }
     async submitEmail(email) {
-        const response = await sendData('https://sendjet-server.glitch.me/profile/changeemail', {email,});
+        const response = await sendData('/profile/changeemail', {email,});
         if (response.status !== 'success') return alert('Error changing email');
         this.props.updateUser({...this.state.user, email,});
     }
     async submitPrefix(prefix) {
-        const response = await sendData('https://sendjet-server.glitch.me/profile/changeprefix', {prefix,});
+        const response = await sendData('/profile/changeprefix', {prefix,});
         if (response.status !== 'success') return alert('Error changing prefix');
         this.props.updateUser({...this.state.user, prefix: {...this.state.user.prefix, title: prefix},});
     }
     async submitUsername(username) {
-        const response = await sendData('https://sendjet-server.glitch.me/profile/changeusername', {username,});
+        const response = await sendData('/profile/changeusername', {username,});
         if (response.status === 'Username already exists') return alert('Username already exists');
         if (response.status !== 'success') return alert('Error changing username');
         this.props.updateUser({...this.state.user, username,});
     }
     async submitPrefixColor(color) {
-        const response = await sendData('https://sendjet-server.glitch.me/profile/changeprefixcolor', {color,});
+        const response = await sendData('/profile/changeprefixcolor', {color,});
         if (response.status !== 'success') return alert('Error changing prefix color');
     }
     async submitUsernameColor(color) {
-        const response = await sendData('https://sendjet-server.glitch.me/profile/changeusernamecolor', {color,});
+        const response = await sendData('/profile/changeusernamecolor', {color,});
         if (response.status !== 'success') return alert('Error changing username color');
     }
 
@@ -243,7 +243,7 @@ class PopupProfile extends Component {
             blob.close();
 
             // Send download url to db to set profilePicture
-            const response = await sendData('https://sendjet-server.glitch.me/profile/updateprofilepicture', { url: downloadURL });
+            const response = await sendData('/profile/updateprofilepicture', { url: downloadURL });
             if (response.status !== 'success') {
                 alert('Error changing picture');
             }

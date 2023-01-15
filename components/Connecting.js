@@ -14,7 +14,7 @@ export default function Connecting(props) {
     });
 
     async function checkLogin() {
-        const response = await sendData('https://sendjet-server.glitch.me/dashboard', {});
+        const response = await sendData('/dashboard', {});
         animation.continue = false;
         animation.finish();
         setTimeout(() => {

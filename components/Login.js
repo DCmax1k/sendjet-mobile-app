@@ -141,7 +141,8 @@ function SignupInputs({setPage}) {
             password: password,
         }
         setSubmitText('Loading...')
-        const response = await sendData('https://sendjet-server.glitch.me/signup', userData);
+        const response = await sendData('/signup', userData);
+        console.log(response);
         setSubmitText('Create Account!');
         if (response.status !== 'success') return alert(response.status);
         setPage('connecting');
@@ -230,7 +231,7 @@ function LoginInputs({setPage}) {
             password: password,
         }
         setSubmitText('Loading...')
-        const response = await sendData('https://sendjet-server.glitch.me/login', userData);
+        const response = await sendData('/login', userData);
         setSubmitText('Login');
         if (response.status !== 'success') return alert(response.status);
         setPage('connecting');

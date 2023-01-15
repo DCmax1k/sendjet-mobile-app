@@ -32,7 +32,7 @@ class DashSearch extends Component {
                 addRequests: [...this.state.user.addRequests, user]
             }
         });
-        const response = await sendData('https://sendjet-server.glitch.me/search/adduser', { id: user._id });
+        const response = await sendData('/search/adduser', { id: user._id });
         if (response.status !== 'success') return alert('Error adding user');
         this.props.socketEmit('adduser', { user: this.state.user, adding: user });
         this.props.updateUser({...this.state.user, addRequests: this.state.user.addRequests});
@@ -45,7 +45,7 @@ class DashSearch extends Component {
                 friends: this.state.user.friends.filter(u => u._id !== user._id),
             },
         });
-        const response = await sendData('https://sendjet-server.glitch.me/search/unadduser', { id: user._id });
+        const response = await sendData('/search/unadduser', { id: user._id });
         this.props.socketEmit('unadduser', { user: this.state.user, unadding: user });
         if (response.status !== 'success') return alert('Error removing user');
         this.props.updateUser({
@@ -62,7 +62,7 @@ class DashSearch extends Component {
                 friends: [...this.state.user.friends, friend],
             }
         });
-        const response = await sendData('https://sendjet-server.glitch.me/search/acceptfriendrequest', {id: friend._id});
+        const response = await sendData('/search/acceptfriendrequest', {id: friend._id});
         if (response.status !== 'success') return alert('Error accepting friend request');
         this.props.socketEmit('acceptfriendrequest', { user: this.state.user, friend, });
         this.props.updateUser({
@@ -74,7 +74,7 @@ class DashSearch extends Component {
 
     async searchUser(query) {
         if (query.length === 0) return this.setState({ searchResults: [] });
-        const response = await sendData('https://sendjet-server.glitch.me/search', { query });
+        const response = await sendData('/search', { query });
         if (response.status !== 'success') return alert('Error searching user');
         this.setState({ searchResults: response.users });
     }

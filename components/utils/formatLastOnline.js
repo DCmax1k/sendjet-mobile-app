@@ -11,5 +11,6 @@ export default function formatLastOnline(lastOnline) {
     if (diffHours < 24) return `${diffHours}h`;
     if (diffDays < 7) return `${diffDays}d`;
     if (diffWeeks < 52) return `${diffWeeks}w`;
+
     return `${diffYears}yrs`;
 }

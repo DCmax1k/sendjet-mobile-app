@@ -112,12 +112,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
 
+
     },
     profileImage: {
-        height: Dimensions.get('window').width/10,
-        width: Dimensions.get('window').width/10,
+        height: Dimensions.get('screen').width/10,
+        width: Dimensions.get('screen').width/10,
         resizeMode: 'contain',
-        borderRadius: Dimensions.get('window').width/10,
+        borderRadius: Dimensions.get('screen').width/10,
     },
     sliderCont: {
         position: 'absolute',

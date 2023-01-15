@@ -65,6 +65,7 @@ class Dashboard extends React.Component {
         this.updateOneConversation = this.updateOneConversation.bind(this);
         this.checkConversation = this.checkConversation.bind(this);
         this.openConversationMenu = this.openConversationMenu.bind(this);
+        this.removeConversation = this.removeConversation.bind(this);
 
     }
 
@@ -88,7 +89,7 @@ class Dashboard extends React.Component {
                 expoPushToken: token
             }
           });
-          sendData('https://sendjet-server.glitch.me/profile/setpushtoken', {token})
+          sendData('/profile/setpushtoken', {token})
         } else {
           //alert('Must use physical device for Push Notifications');
         }
@@ -244,13 +245,15 @@ class Dashboard extends React.Component {
 
                 // Update seen by status
                 const conversation = this.state.conversations.find(c => c._id === conversationID);
+                if (!conversation) return;
                 conversation.seenBy = [userID];
                 this.updateOneConversation(conversation);
             }
         });
 
         this.socket.on('leaveConversation', ({conversationID, userID}) => {
-            this.state.messaging.current.removeInChatUser(userID);
+            this.state.messaging.current.removeUserFromConvo({conversationID, userID});
+
         });
 
         this.socket.on('isTyping', ({conversationID, userID, text}) => {
@@ -294,6 +297,11 @@ class Dashboard extends React.Component {
 
 
     setDashPage(page) {
+        // If at dashPage = home and pressed home, unfocus any widget
+        if (page === 'home' && this.state.dashPage === 'home') {
+            this.state.dashHome.current.focusWidget('');
+        }
+        // If alr at the same page, return
         if (page === this.state.dashPage) return;
         this.fadeOutCurrentPage();
         setTimeout(() => {
@@ -323,6 +331,9 @@ class Dashboard extends React.Component {
     }
     updateOneConversation(conversation) {
         this.updateConversations([...this.state.conversations.filter(c => c._id !== conversation._id), conversation]);
+    }
+    removeConversation(conversationID) {
+        this.updateConversations([...this.state.conversations.filter(c => c._id !== conversationID)]);
     }
     updateUser(user, emit = true) {
         if (emit) this.socketEmit('updateUser', user);
@@ -445,6 +456,7 @@ class Dashboard extends React.Component {
                 getCurrentlyOnline={this.getCurrentlyOnline}
                 socketEmit={this.socketEmit}
                 popupProfile={this.popupProfile}
+                removeConversation={this.removeConversation}
                 />
 
                 <ConversationMenu
@@ -454,6 +466,7 @@ class Dashboard extends React.Component {
                     updateUser={this.updateUser}
                     updateOneConversation={this.updateOneConversation}
                     socketEmit={this.socketEmit}
+                    removeConversation={this.removeConversation}
                     // conversation={this.state.conversation}
                     />
 
